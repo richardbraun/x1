@@ -1,0 +1,139 @@
+X1 - A minimalist educational operating system
+==============================================
+
+X1 is a very small operating system meant to introduce students to low-level
+system programming. As a result, it focuses on clarity of explanation. It's
+not meant to demonstrate state-of-the-art methods and algorithms, but rather
+simple, naive ones that do the job, while providing pointers and references
+to the more modern ways.
+
+X1 is a single address space operating system, always running with the
+highest privileges. There is no userspace, and no system calls. Despite
+that, the operating system is also called the kernel.
+
+
+Building
+--------
+
+X1 expects a Unix-like environment, including make and a GCC compilation
+toolchain. It's been tested on a few Linux distributions such as Debian
+and Arch.
+
+Building the kernel is done using the make command from the source root
+directory. The end result is a statically linked ELF [1] file named x1.
+On Debian, the following packages are required :
+
+ - build-essential
+     Meta-package pulling the gcc and make packages, among others.
+ - gcc-multilib
+     Multilib support for GCC, which provides the 32-bits static libgcc
+     library required to link the kernel on 64-bits machines.
+
+Examining the kernel binary
+---------------------------
+
+The kernel can be examined with standard GNU binutils tools [2]. Here are
+some common command line examples to obtain information directly from the
+kernel binary :
+
+ - objdump -d x1 | less
+     Disassemble the kernel machine code.
+ - readelf -aW x1 | less
+     Display ELF information, such as headers and sections.
+ - addr2line -e x1 0x1003f0
+     Convert an address into a source location.
+ - nm x1
+     List symbol names.
+
+
+Running
+-------
+
+X1 targets the x86 32-bits architecture only (i386) [3], and ignores some
+advanced features such as virtual memory and SMP. It is compliant with the
+original multiboot specification [4] and GRUB is the recommended boot loader.
+It only supports legacy BIOS systems (no EFI/UEFI).
+
+A simple way to run the kernel is to use the qemu.sh shell script, which
+relies on the QEMU -kernel option to act as a multiboot boot loader.
+On Debian, the following packages are required :
+
+ - qemu
+     The well known machine emulator.
+
+When QEMU is running, you may enter (and leave) its monitor prompt using
+the Ctrl-a c key sequence. The most useful monitor commands are :
+
+ - info registers
+     Print the content of all core registers.
+ - info pic
+     Print the state of the legacy PIC interrupt controller.
+
+If you're interested in the details, the following commands may be of interest :
+
+ - info mtree
+     Print the various emulated address spaces.
+ - info qtree
+     Print the emulated device tree.
+
+
+Getting started
+---------------
+
+Even a simple project like X1 requires broad knowledge, spanning from a basic
+understanding of processors, memory, assembly and compilation toolchains. The
+OSDev website [5] provides a good starting point to find information of decent
+quality. Beyond that, readers are encouraged to refer to actual reference
+documentation, and of course, search engines.
+
+Here is a non-exhaustive list of topics readers should hopefully develop their
+understanding of with this project, and are encouraged to briefly learn about
+even before starting playing with X1 :
+
+ - Processor architecture, including core registers, machine instructions
+   and accessing memory through loads and stores.
+ - Control of the link step through a linker script.
+ - The concept of an executable format, including partitioning the content into
+   sections, such as code and data sections. See ELF [1].
+ - The C programming language, including common extensions, such as controlling
+   alignment. The source code conforms to C99 [6] with some GNU extensions.
+
+The two files reader should use as their entry points are :
+
+ - src/boot_asm.S
+     The assembly source file containing the very first instructions.
+ - src/kernel.lds
+     The linker script used to control the link step.
+
+Sources organization
+--------------------
+
+The project sources are split into three directories :
+
+- include
+    This directory may only contain standard headers, normally provided
+    by the "implementation" (e.g. the compiler and the C library) in a
+    hosted environment. Because this is a kernel, the environment is
+    free standing instead, so any additional standard service must be
+    added manually. See ISO/IEC 9899:1999 5.1.2.1 "Freestanding environment"
+    in the C99 specification for all the details.
+- lib
+    This directory contains external code used as a library by the kernel.
+    These files are copied from the librbraun library [7] and are meant to
+    provide a tiny and easily embedded "development kit".
+- src
+    This directory contains the actual kernel code.
+
+The coding style used is borrowed from X1's big brother X15 [8].
+
+References
+----------
+
+[1] ELF: http://refspecs.linuxbase.org/elf/elf.pdf
+[2] GNU binutils : http://sourceware.org/binutils/docs-2.29/
+[3] Intel combined manuals : https://software.intel.com/en-us/articles/intel-sdm
+[4] Multiboot specification : https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+[5] OSDev website : http://wiki.osdev.org/
+[6] C99 specification : http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf
+[7] https://www.sceen.net/basic-modules-library-for-c/
+[8] https://www.sceen.net/~rbraun/x15/doc/style.9.html
