@@ -82,6 +82,9 @@ typedef void (*cpu_irq_handler_fn_t)(void *arg);
 
 /*
  * Enable/disable interrupts.
+ *
+ * These functions imply a compiler barrier.
+ * See thread_preempt_disable() in thread.c.
  */
 void cpu_intr_enable(void);
 void cpu_intr_disable(void);
@@ -90,6 +93,9 @@ void cpu_intr_disable(void);
  * Disable/restore interrupts.
  *
  * Calls to these functions can safely nest.
+ *
+ * These functions imply a compiler barrier.
+ * See thread_preempt_disable() in thread.c.
  */
 uint32_t cpu_intr_save(void);
 void cpu_intr_restore(uint32_t eflags);
