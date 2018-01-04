@@ -37,8 +37,7 @@
  * See Intel 64 and IA-32 Architecture Software Developer's Manual, Volume 3
  * System Programming Guide, 2.3 System Flags and Fields in The EFLAGS Register.
  */
-#define CPU_EFL_ONE     0x002
-#define CPU_EFL_IF      0x200
+#define CPU_EFL_IF      0x200   /* Enable maskable hardware interrupts */
 
 /*
  * GDT segment descriptor indexes, in bytes.
