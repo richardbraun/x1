@@ -257,7 +257,7 @@ list_insert_tail(struct list *list, struct list *node)
  * Insert a node before another node.
  */
 static inline void
-list_insert_before(struct list *next, struct list *node)
+list_insert_before(struct list *node, struct list *next)
 {
     list_add(next->prev, next, node);
 }
@@ -266,7 +266,7 @@ list_insert_before(struct list *next, struct list *node)
  * Insert a node after another node.
  */
 static inline void
-list_insert_after(struct list *prev, struct list *node)
+list_insert_after(struct list *node, struct list *prev)
 {
     list_add(prev, prev->next, node);
 }
@@ -451,7 +451,7 @@ list_llsync_insert_tail(struct list *list, struct list *node)
  * Insert a node before another node.
  */
 static inline void
-list_llsync_insert_before(struct list *next, struct list *node)
+list_llsync_insert_before(struct list *node, struct list *next)
 {
     list_llsync_add(next->prev, next, node);
 }
@@ -460,7 +460,7 @@ list_llsync_insert_before(struct list *next, struct list *node)
  * Insert a node after another node.
  */
 static inline void
-list_llsync_insert_after(struct list *prev, struct list *node)
+list_llsync_insert_after(struct list *node, struct list *prev)
 {
     list_llsync_add(prev, prev->next, node);
 }

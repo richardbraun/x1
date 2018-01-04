@@ -283,7 +283,7 @@ timer_schedule(struct timer *timer, unsigned long ticks)
         }
     }
 
-    list_insert_before(&tmp->node, &timer->node);
+    list_insert_before(&timer->node, &tmp->node);
 
     timer = list_first_entry(&timer_list, typeof(*timer), node);
 
