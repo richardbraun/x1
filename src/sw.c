@@ -256,7 +256,7 @@ error:
     printf("sw_wait: error: invalid arguments\n");
 }
 
-static struct shell_cmd shell_cmds[] = {
+static struct shell_cmd sw_shell_cmds[] = {
     SHELL_CMD_INITIALIZER("sw_start", sw_shell_start,
         "sw_start",
         "start the stopwatch"),
@@ -283,5 +283,5 @@ sw_setup(void)
         panic("sw: error: unable to create stopwatch");
     }
 
-    SHELL_REGISTER_CMDS(shell_cmds);
+    SHELL_REGISTER_CMDS(sw_shell_cmds);
 }
