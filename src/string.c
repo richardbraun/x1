@@ -155,8 +155,8 @@ strerror(int errnum)
         return "resource temporarily unavailable";
     case ENOMEM:
         return "not enough space";
-    case EIO:
-        return "input/output error";
+    case ENOENT:
+        return "no such file or directory";
     case EBUSY:
         return "resource busy";
     case EEXIST:

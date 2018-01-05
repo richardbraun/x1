@@ -409,7 +409,7 @@ fmt_sprintf_state_consume(struct fmt_sprintf_state *state)
     c = fmt_consume(&state->format);
 
     if (c == '\0') {
-        return EIO;
+        return ENOENT;
     }
 
     if (c != '%') {
@@ -1091,7 +1091,7 @@ fmt_sscanf_state_consume(struct fmt_sscanf_state *state)
     c = fmt_consume(&state->format);
 
     if (c == '\0') {
-        return EIO;
+        return ENOENT;
     }
 
     if (c != '%') {

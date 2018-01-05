@@ -26,7 +26,7 @@
 #define EINVAL      1
 #define EAGAIN      2
 #define ENOMEM      3
-#define EIO         4
+#define ENOENT      4
 #define EBUSY       5
 #define EEXIST      6
 
