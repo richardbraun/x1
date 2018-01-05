@@ -66,7 +66,7 @@ cpu_load_gdt:
   mov %eax, %ss
 
   /*
-   * The code segment cannot directly be written to, and is instead
+   * The code segment register cannot directly be written to, and is instead
    * modified by performing a long jump.
    *
    * See Intel 64 and IA-32 Architecture Software Developer's Manual :
