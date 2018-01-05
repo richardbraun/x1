@@ -128,6 +128,23 @@ name:                                   \
   pushl $(vector);                      \
   jmp cpu_intr_common
 
+/*
+ * This is the first common low level entry point for all exceptions and
+ * interrupts. When reached, the stack contains the registers automatically
+ * pushed by the processor, an error code and the vector. It's important
+ * to note that the stack pointer still points to the stack of the thread
+ * running when the interrupt occurs. Actually, in this implementation,
+ * the entire interrupt handler borrows the stack of the interrupted thread.
+ *
+ * This is dangerous because the stack must then be large enough for both
+ * the largest call chain of the interrupted thread as well as the largest
+ * call chain of any interrupt handler. On some implementations, especially
+ * those with very demanding real-time constraints, interrupt handling may
+ * nest to avoid waiting for the current interrupt to be serviced before
+ * starting handling a higher priority one, leading to even larger stack
+ * needs. This is why many operating systems dedicate a separate stack for
+ * interrupt handling.
+ */
 cpu_intr_common:
   CPU_INTR_STORE_REGISTERS
   push %esp                 /* push the address of the interrupt frame */

@@ -463,6 +463,30 @@ cpu_intr_main(const struct cpu_intr_frame *frame)
      * because the interrupt handler has awaken a higher priority thread,
      * in which case a context switch is triggerred. Such context switches
      * are called involuntary.
+     *
+     * Here is what the stack looks like when such a context switch occurs :
+     *
+     * |                                 | Stack grows down.
+     * |                                 |
+     * | stack of the interrupted thread |
+     * |                                 |
+     * +---------------------------------+ <- interrupt occurs
+     * |                                 |
+     * | struct cpu_intr_frame           |
+     * |                                 |
+     * +---------------------------------+
+     * |                                 |
+     * | cpu_intr_main stack frame       |
+     * |                                 |
+     * +---------------------------------+
+     * |                                 |
+     * | thread function stack frames    |
+     * |                                 |
+     * +---------------------------------+
+     * |                                 |
+     * | thread context on switch        | See thread_switch_context in
+     * |                                 | thread_asm.S.
+     * +---------------------------------+
      */
     thread_preempt_enable();
 }
