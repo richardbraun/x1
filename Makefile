@@ -2,7 +2,7 @@ MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-builtin-variables
 
 # The project version.
-VERSION = 0.1
+VERSION = 1.0
 
 # The selected C compiler.
 #
