@@ -33,7 +33,6 @@
 #include <lib/macros.h>
 
 #include "cpu.h"
-#include "error.h"
 #include "i8259.h"
 #include "thread.h"
 

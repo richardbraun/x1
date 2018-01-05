@@ -29,11 +29,13 @@
 #ifndef _SHELL_H
 #define _SHELL_H
 
+#include <errno.h>
 #include <stddef.h>
+#include <string.h>
 
 #include <lib/macros.h>
 
-#include <src/error.h>
+#include <src/panic.h>
 
 #define SHELL_REGISTER_CMDS(cmds)                           \
 MACRO_BEGIN                                                 \
@@ -42,7 +44,10 @@ MACRO_BEGIN                                                 \
                                                             \
     for (___i = 0; ___i < ARRAY_SIZE(cmds); ___i++) {       \
         ___error = shell_cmd_register(&(cmds)[___i]);       \
-        error_check(___error, __func__);                    \
+                                                            \
+        if (___error) {                                     \
+            panic("%s: %s", __func__, strerror(___error));  \
+        }                                                   \
     }                                                       \
 MACRO_END
 

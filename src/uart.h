@@ -52,7 +52,7 @@ void uart_write(uint8_t byte);
  * until there is data to consume.
  *
  * If successful, return 0. If another thread is already waiting for data,
- * ERROR_BUSY is returned.
+ * EBUSY is returned.
  *
  * Preemption must be enabled when calling this function.
  */

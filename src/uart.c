@@ -22,6 +22,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -31,7 +32,6 @@
 #include <lib/macros.h>
 
 #include "cpu.h"
-#include "error.h"
 #include "io.h"
 #include "uart.h"
 #include "thread.h"
@@ -164,7 +164,7 @@ uart_read(uint8_t *byte)
     eflags = cpu_intr_save();
 
     if (uart_waiter) {
-        error = ERROR_BUSY;
+        error = EBUSY;
         goto out;
     }
 

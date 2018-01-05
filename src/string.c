@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <errno.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -140,4 +141,27 @@ strncmp(const char *s1, const char *s2, size_t n)
     }
 
     return (int)c1 - (int)c2;
+}
+
+char *
+strerror(int errnum)
+{
+    switch (errnum) {
+    case 0:
+        return "success";
+    case EINVAL:
+        return "invalid argument";
+    case EAGAIN:
+        return "resource temporarily unavailable";
+    case ENOMEM:
+        return "not enough space";
+    case EIO:
+        return "input/output error";
+    case EBUSY:
+        return "resource busy";
+    case EEXIST:
+        return "entry exist";
+    default:
+        return "unknown error";
+    }
 }

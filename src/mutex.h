@@ -151,7 +151,7 @@ void mutex_lock(struct mutex *mutex);
  *
  * This is the non-blocking variant of mutex_lock().
  *
- * Return 0 on success, ERROR_BUSY if locking the mutex failed.
+ * Return 0 on success, EBUSY if locking the mutex failed.
  */
 int mutex_trylock(struct mutex *mutex);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,48 +20,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef _ERRNO_H
+#define _ERRNO_H
 
-#include <lib/macros.h>
+#define EINVAL      1
+#define EAGAIN      2
+#define ENOMEM      3
+#define EIO         4
+#define EBUSY       5
+#define EEXIST      6
 
-#include "error.h"
-#include "panic.h"
-
-/*
- * Error message table.
- *
- * This table must be consistent with the enum defined in error.h.
- */
-static const char *error_msg_table[] = {
-    "success",
-    "invalid argument",
-    "resource temporarily unavailable",
-    "not enough space",
-    "input/output error",
-    "resource busy",
-    "entry exist",
-};
-
-const char *
-error_str(unsigned int error)
-{
-    if (error >= ARRAY_SIZE(error_msg_table)) {
-        return "invalid error code";
-    }
-
-    return error_msg_table[error];
-}
-
-void
-error_check(int error, const char *prefix)
-{
-    if (!error) {
-        return;
-    }
-
-    panic("%s%s%s",
-          (prefix == NULL) ? "" : prefix,
-          (prefix == NULL) ? "" : ": ",
-          error_str(error));
-}
+#endif /* _ERRNO_H */

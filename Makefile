@@ -183,7 +183,6 @@ SOURCES = \
 	src/condvar.c \
 	src/cpu.c \
 	src/cpu_asm.S \
-	src/error.c \
 	src/i8254.c \
 	src/i8259.c \
 	src/io_asm.S \

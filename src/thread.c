@@ -22,6 +22,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,7 +33,6 @@
 #include <lib/list.h>
 
 #include "cpu.h"
-#include "error.h"
 #include "panic.h"
 #include "thread.h"
 #include "timer.h"
@@ -675,7 +675,7 @@ thread_create(struct thread **threadp, thread_fn_t fn, void *arg,
     thread = malloc(sizeof(*thread));
 
     if (!thread) {
-        return ERROR_NOMEM;
+        return ENOMEM;
     }
 
     if (stack_size < THREAD_STACK_MIN_SIZE) {
@@ -686,7 +686,7 @@ thread_create(struct thread **threadp, thread_fn_t fn, void *arg,
 
     if (!stack) {
         free(thread);
-        return ERROR_NOMEM;
+        return ENOMEM;
     }
 
     thread_init(thread, fn, arg, name, stack, stack_size, priority);

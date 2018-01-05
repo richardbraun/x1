@@ -38,6 +38,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -45,7 +46,6 @@
 #include <lib/macros.h>
 
 #include "cpu.h"
-#include "error.h"
 #include "i8259.h"
 #include "io.h"
 
@@ -131,7 +131,7 @@ i8259_convert_global_irq(unsigned int irq, struct i8259_pic **pic,
         error = 0;
     } else {
         *local_irq = 0;
-        error = ERROR_INVAL;
+        error = EINVAL;
     }
 
     return error;

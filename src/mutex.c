@@ -21,13 +21,13 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
 
 #include <lib/list.h>
 #include <lib/macros.h>
 
-#include "error.h"
 #include "mutex.h"
 #include "thread.h"
 
@@ -122,7 +122,7 @@ mutex_trylock(struct mutex *mutex)
     thread_preempt_disable();
 
     if (mutex->locked) {
-        error = ERROR_BUSY;
+        error = EBUSY;
     } else {
         error = 0;
         mutex_set_owner(mutex, thread_self());
