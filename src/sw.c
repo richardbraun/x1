@@ -277,19 +277,11 @@ static struct shell_cmd shell_cmds[] = {
 void
 sw_setup(void)
 {
-    int error;
-
     sw_instance = sw_create();
 
     if (!sw_instance) {
         panic("sw: error: unable to create stopwatch");
     }
 
-    for (size_t i = 0; i < ARRAY_SIZE(shell_cmds); i++) {
-        error = shell_cmd_register(&shell_cmds[i]);
-
-        if (error) {
-            panic("unable to register shell command");
-        }
-    }
+    SHELL_REGISTER_CMDS(shell_cmds);
 }
