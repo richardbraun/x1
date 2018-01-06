@@ -118,7 +118,15 @@ strcmp(const char *s1, const char *s2)
         s2++;
     }
 
-    return (int)c1 - (int)c2;
+    /*
+     * See C99 7.21.4 Comparison functions :
+     * The sign of a nonzero value returned by the comparison functions
+     * memcmp, strcmp, and strncmp is determined by the sign of the
+     * difference between the values of the first pair of characters
+     * (both interpreted as unsigned char) that differ in the objects
+     * being compared.
+     */
+    return (int)(unsigned char)c1 - (int)(unsigned char)c2;
 }
 
 int
@@ -140,7 +148,8 @@ strncmp(const char *s1, const char *s2, size_t n)
         s2++;
     }
 
-    return (int)c1 - (int)c2;
+    /* See strcmp() */
+    return (int)(unsigned char)c1 - (int)(unsigned char)c2;
 }
 
 char *
