@@ -504,7 +504,7 @@ cpu_irq_register(unsigned int irq, cpu_irq_handler_fn_t fn, void *arg)
     cpu_irq_handler_set_fn(handler, fn, arg);
     i8259_irq_enable(irq);
 
-    thread_preempt_disable();
+    thread_preempt_enable();
     cpu_intr_restore(eflags);
 }
 
