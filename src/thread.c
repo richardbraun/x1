@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  * Copyright (c) 2017 Jerko Lenstra.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -68,6 +68,25 @@ struct thread_list {
  * The current thread, which is the one currently running on the processor,
  * isn't in any of the thread lists.
  *
+ * A thread may be be "voluntarily" preempted, when it yields the processor
+ * itself, or "involuntarily" preempted when an interrupt occurs. Since it's
+ * not possible to immediately yield the processor when preemption is
+ * disabled (including in the middle of an interrupt handler), preemption
+ * may only occur on specific events :
+ *  - Calling thread_yield() with preemption enabled.
+ *  - Preemption is reenabled, i.e. the preemption level goes back to 0.
+ *  - Return from an interrupt.
+ *
+ * Calling thread_yield() is completely voluntary and is ignored in this
+ * discussion. Returning from an interrupt actually reenables preemption,
+ * so the only case discussed is reenabling preemption. The mechanism used
+ * to trigger scheduling when preemption is reenabled is the yield flag.
+ * When the scheduler determines that the current thread should yield the
+ * processor, e.g. because an interrupt handler has awaken a higher priority
+ * thread, it sets the yield flag of the run queue. When preemption is
+ * reenabled, the flag is checked, and if true, the current thread yields
+ * the processor.
+ *
  * The idle thread runs when no other thread is in the running state.
  *
  * Interrupts and preemption must be disabled when accessing a run queue.
@@ -77,6 +96,8 @@ struct thread_list {
  */
 struct thread_runq {
     struct thread *current;
+    bool yield;
+    unsigned int preempt_level;
     unsigned int nr_threads;
     struct thread_list lists[THREAD_NR_PRIORITIES];
     struct thread *idle;
@@ -100,31 +121,13 @@ enum thread_state {
  * When the context is saved, the stack pointer is updated to the value
  * of the stack register at the time the thread context is saved.
  *
- * A thread may be be "voluntarily" preempted, when it yields the processor
- * itself, or "involuntarily" preempted when an interrupt occurs. Since it's
- * not possible to immediately yield the processor when preemption is
- * disabled (including in the middle of an interrupt handler), preemption
- * may only occur on specific events :
- *  - Calling thread_yield() with preemption enabled.
- *  - Preemption is reenabled, i.e. the preemption level goes back to 0.
- *  - Return from an interrupt.
- *
- * Calling thread_yield() is completely voluntary and is ignored in this
- * discussion. Returning from an interrupt actually reenables preemption,
- * so the only case discussed is reenabling preemption. The mechanism used
- * to trigger scheduling when preemption is reenabled is the yield flag.
- * When the scheduler determines that the current thread should yield the
- * processor, e.g. because an interrupt handler has awaken a higher priority
- * thread, it marks the current thread for yielding. When preemption is
- * reenabled, the flag is checked, and if true, the current thread yields
- * the processor.
+ * Accessing threads is subject to the same synchronization rules as a
+ * run queue.
  */
 struct thread {
     void *sp;
     enum thread_state state;
-    bool yield;
     struct list node;
-    unsigned int preempt_level;
     unsigned int priority;
     struct thread *joiner;
     char name[THREAD_NAME_MAX_SIZE];
@@ -165,6 +168,46 @@ thread_idle(void *arg)
 }
 
 static bool
+thread_scheduler_locked(void)
+{
+    return !cpu_intr_enabled() && !thread_preempt_enabled();
+}
+
+static void
+thread_list_init(struct thread_list *list)
+{
+    list_init(&list->threads);
+}
+
+static void
+thread_list_remove(struct thread *thread)
+{
+    list_remove(&thread->node);
+}
+
+static void
+thread_list_enqueue(struct thread_list *list, struct thread *thread)
+{
+    list_insert_tail(&list->threads, &thread->node);
+}
+
+static struct thread *
+thread_list_dequeue(struct thread_list *list)
+{
+    struct thread *thread;
+
+    thread = list_first_entry(&list->threads, typeof(*thread), node);
+    thread_list_remove(thread);
+    return thread;
+}
+
+static bool
+thread_list_empty(struct thread_list *list)
+{
+    return list_empty(&list->threads);
+}
+
+static bool
 thread_is_running(const struct thread *thread)
 {
     return thread->state == THREAD_STATE_RUNNING;
@@ -194,186 +237,60 @@ thread_set_dead(struct thread *thread)
     thread->state = THREAD_STATE_DEAD;
 }
 
-static bool
-thread_should_yield(const struct thread *thread)
-{
-    return thread->yield;
-}
-
-static void
-thread_set_yield(struct thread *thread)
-{
-    thread->yield = true;
-}
-
-static void
-thread_clear_yield(struct thread *thread)
-{
-    thread->yield = false;
-}
-
 static unsigned int
 thread_get_priority(struct thread *thread)
 {
     return thread->priority;
 }
 
-static void
-thread_remove_from_list(struct thread *thread)
-{
-    list_remove(&thread->node);
-}
-
-static void
-thread_yield_if_needed(void)
-{
-    if (thread_should_yield(thread_self())) {
-        thread_yield();
-    }
-}
-
-void
-thread_preempt_disable(void)
-{
-    struct thread *thread;
-
-    thread = thread_self();
-    thread->preempt_level++;
-    assert(thread->preempt_level != 0);
-
-    /*
-     * This is a compiler barrier. It tells the compiler not to reorder
-     * the instructions it emits across this point.
-     *
-     * Reordering is one of the most effective ways to optimize generated
-     * machine code, and the C specification allows compilers to optimize
-     * very aggressively, which is why C shouldn't be thought of as a
-     * "portable assembler" any more.
-     *
-     * Sometimes, especially when building critical sections, strong control
-     * over ordering is required, and this is when compiler barriers should
-     * be used. In this kernel, disabling preemption is one of the primary
-     * ways to create critical sections. The following barrier makes sure
-     * that no instructions from the critical section leak out before it.
-     *
-     * When using GCC or a compatible compiler such as Clang, compiler
-     * barriers are implemented with an inline assembly expression that
-     * includes the "memory" clobber. This clobber tells the compiler that
-     * memory may change in unexpected ways. All memory accesses started
-     * before the barrier must complete before the barrier, and all memory
-     * accesses that complete after the barrier must start after the barrier.
-     * See barrier() in macros.h.
-     *
-     * When calling assembly functions, there is usually no need to add
-     * an explicit compiler barrier, because the compiler, not knowing
-     * what the external function does, normally assumes memory may change,
-     * i.e. that the function has unexpected side effects. In C code however,
-     * the compiler has better knowledge about side effects. That knowledge
-     * comes from the amount of code in a single compilation unit. The
-     * traditional compilation unit when building with optimizations is the
-     * source file, but with link-time optimizations (LTO), this can be the
-     * whole program. This is why specifying barriers in C code is required
-     * for a reliable behaviour.
-     *
-     * Also note that compiler barriers only affect the machine code
-     * generated by the compiler. Processors also internally perform
-     * various kinds of reordering. When confined to a single processor,
-     * this can safely be ignored because the processor model guarantees
-     * that the state seen by software matches program order. This
-     * assumption breaks on multiprocessor systems though, where memory
-     * barriers are also required to enforce ordering across processors.
-     */
-    barrier();
-}
-
-static void
-thread_preempt_enable_no_yield(void)
-{
-    struct thread *thread;
-
-    /* See thread_preempt_disable() */
-    barrier();
-
-    thread = thread_self();
-    assert(thread->preempt_level != 0);
-    thread->preempt_level--;
-}
-
-void
-thread_preempt_enable(void)
-{
-    thread_preempt_enable_no_yield();
-    thread_yield_if_needed();
-}
-
-bool
-thread_preempt_enabled(void)
-{
-    struct thread *thread;
-
-    thread = thread_self();
-    return thread->preempt_level == 0;
-}
-
 static bool
-thread_scheduler_locked(void)
+thread_runq_should_yield(const struct thread_runq *runq)
 {
-    return !cpu_intr_enabled() && !thread_preempt_enabled();
+    return runq->yield;
 }
 
-static uint32_t
-thread_lock_scheduler(void)
+static void
+thread_runq_set_yield(struct thread_runq *runq)
+{
+    runq->yield = true;
+}
+
+static void
+thread_runq_clear_yield(struct thread_runq *runq)
+{
+    runq->yield = false;
+}
+
+static unsigned int
+thread_runq_get_preempt_level(const struct thread_runq *runq)
+{
+    return runq->preempt_level;
+}
+
+static void
+thread_runq_inc_preempt_level(struct thread_runq *runq)
 {
     /*
-     * When disabling both preemption and interrupts, it is best to do it in
-     * this order, since, if an interrupt occurs after preemption is disabled
-     * but before interrupts are disabled, it may not cause a context switch.
-     *
-     * Besides, disabling interrupts first would slightly increase interrupt
-     * latencies.
+     * There is no need to protect this increment by disabling interrupts
+     * or using a single interrupt-safe instruction such as inc, because
+     * the preemption level can only be 0 when other threads access it
+     * concurrently. As a result, all threads racing to disable preemption
+     * would read 0 and write 1. Although the increment is not atomic, the
+     * store is serialized such that the first thread that manages to update
+     * memory has effectively prevented all other threads from running,
+     * at least until it reenables preemption, which turns the preemption
+     * level back to 0, making the read-modify-write increment other threads
+     * may have started correct.
      */
-    thread_preempt_disable();
-    return cpu_intr_save();
+    runq->preempt_level++;
+    assert(runq->preempt_level != 0);
 }
 
 static void
-thread_unlock_scheduler(uint32_t eflags, bool yield)
+thread_runq_dec_preempt_level(struct thread_runq *runq)
 {
-    cpu_intr_restore(eflags);
-
-    if (yield) {
-        thread_preempt_enable();
-    } else {
-        thread_preempt_enable_no_yield();
-    }
-}
-
-static void
-thread_list_init(struct thread_list *list)
-{
-    list_init(&list->threads);
-}
-
-static void
-thread_list_enqueue(struct thread_list *list, struct thread *thread)
-{
-    list_insert_tail(&list->threads, &thread->node);
-}
-
-static struct thread *
-thread_list_dequeue(struct thread_list *list)
-{
-    struct thread *thread;
-
-    thread = list_first_entry(&list->threads, typeof(*thread), node);
-    thread_remove_from_list(thread);
-    return thread;
-}
-
-static bool
-thread_list_empty(struct thread_list *list)
-{
-    return list_empty(&list->threads);
+    assert(runq->preempt_level != 0);
+    runq->preempt_level--;
 }
 
 static struct thread_list *
@@ -455,7 +372,7 @@ thread_runq_add(struct thread_runq *runq, struct thread *thread)
     assert(runq->nr_threads != 0);
 
     if (thread_get_priority(thread) > thread_get_priority(runq->current)) {
-        thread_set_yield(runq->current);
+        thread_runq_set_yield(runq);
     }
 }
 
@@ -466,7 +383,7 @@ thread_runq_remove(struct thread_runq *runq, struct thread *thread)
     runq->nr_threads--;
 
     assert(!thread_is_running(thread));
-    thread_remove_from_list(thread);
+    thread_list_remove(thread);
 }
 
 static void
@@ -477,7 +394,7 @@ thread_runq_schedule(struct thread_runq *runq)
     prev = thread_runq_get_current(runq);
 
     assert(thread_scheduler_locked());
-    assert(prev->preempt_level == 1);
+    assert(runq->preempt_level == 1);
 
     thread_runq_put_prev(runq, prev);
 
@@ -515,14 +432,127 @@ thread_runq_schedule(struct thread_runq *runq)
     }
 }
 
+static void
+thread_yield_if_needed(void)
+{
+    if (thread_runq_should_yield(&thread_runq)) {
+        thread_yield();
+    }
+}
+
+void
+thread_preempt_disable(void)
+{
+    thread_runq_inc_preempt_level(&thread_runq);
+
+    /*
+     * This is a compiler barrier. It tells the compiler not to reorder
+     * the instructions it emits across this point.
+     *
+     * Reordering is one of the most effective ways to optimize generated
+     * machine code, and the C specification allows compilers to optimize
+     * very aggressively, which is why C shouldn't be thought of as a
+     * "portable assembler" any more.
+     *
+     * Sometimes, especially when building critical sections, strong control
+     * over ordering is required, and this is when compiler barriers should
+     * be used. In this kernel, disabling preemption is one of the primary
+     * ways to create critical sections. The following barrier makes sure
+     * that no instructions from the critical section leak out before it.
+     *
+     * When using GCC or a compatible compiler such as Clang, compiler
+     * barriers are implemented with an inline assembly expression that
+     * includes the "memory" clobber. This clobber tells the compiler that
+     * memory may change in unexpected ways. All memory accesses started
+     * before the barrier must complete before the barrier, and all memory
+     * accesses that complete after the barrier must start after the barrier.
+     * See barrier() in macros.h.
+     *
+     * When calling assembly functions, there is usually no need to add
+     * an explicit compiler barrier, because the compiler, not knowing
+     * what the external function does, normally assumes memory may change,
+     * i.e. that the function has unexpected side effects. In C code however,
+     * the compiler has better knowledge about side effects. That knowledge
+     * comes from the amount of code in a single compilation unit. The
+     * traditional compilation unit when building with optimizations is the
+     * source file, but with link-time optimizations (LTO), this can be the
+     * whole program. This is why specifying barriers in C code is required
+     * for a reliable behaviour.
+     *
+     * Also note that compiler barriers only affect the machine code
+     * generated by the compiler. Processors also internally perform
+     * various kinds of reordering. When confined to a single processor,
+     * this can safely be ignored because the processor model guarantees
+     * that the state seen by software matches program order. This
+     * assumption breaks on multiprocessor systems though, where memory
+     * barriers are also required to enforce ordering across processors.
+     */
+    barrier();
+}
+
+static void
+thread_preempt_enable_no_yield(void)
+{
+    /* See thread_preempt_disable() */
+    barrier();
+
+    thread_runq_dec_preempt_level(&thread_runq);
+}
+
+void
+thread_preempt_enable(void)
+{
+    thread_preempt_enable_no_yield();
+    thread_yield_if_needed();
+}
+
+static unsigned int
+thread_preempt_level(void)
+{
+    return thread_runq_get_preempt_level(&thread_runq);
+}
+
+bool
+thread_preempt_enabled(void)
+{
+    return thread_preempt_level() == 0;
+}
+
+static uint32_t
+thread_lock_scheduler(void)
+{
+    /*
+     * When disabling both preemption and interrupts, it is best to do it in
+     * this order, since, if an interrupt occurs after preemption is disabled
+     * but before interrupts are disabled, it may not cause a context switch.
+     *
+     * Besides, disabling interrupts first would slightly increase interrupt
+     * latencies.
+     */
+    thread_preempt_disable();
+    return cpu_intr_save();
+}
+
+static void
+thread_unlock_scheduler(uint32_t eflags, bool yield)
+{
+    cpu_intr_restore(eflags);
+
+    if (yield) {
+        thread_preempt_enable();
+    } else {
+        thread_preempt_enable_no_yield();
+    }
+}
+
 void
 thread_enable_scheduler(void)
 {
     struct thread *thread;
 
+    assert(thread_preempt_level() == 1);
+
     thread = thread_runq_get_next(&thread_runq);
-    assert(thread);
-    assert(thread->preempt_level == 1);
     thread_load_context(thread);
 
     /* Never reached */
@@ -533,8 +563,8 @@ thread_main(thread_fn_t fn, void *arg)
 {
     assert(fn);
 
-    assert(thread_scheduler_locked());
-    assert(thread_self()->preempt_level == 1);
+    assert(!cpu_intr_enabled());
+    assert(thread_preempt_level() == 1);
 
     cpu_intr_enable();
     thread_preempt_enable();
@@ -654,8 +684,6 @@ thread_init(struct thread *thread, thread_fn_t fn, void *arg,
     }
 
     thread->state = THREAD_STATE_RUNNING;
-    thread->yield = false;
-    thread->preempt_level = 1;
     thread->priority = priority;
     thread->joiner = NULL;
     thread_set_name(thread, name);
@@ -777,34 +805,40 @@ thread_create_idle(void)
 }
 
 static void
-thread_runq_preinit(struct thread_runq *runq)
-{
-    thread_init(&thread_dummy, NULL, NULL, "dummy", NULL, 0, 0);
-    runq->current = &thread_dummy;
-}
-
-static void
 thread_runq_init(struct thread_runq *runq)
 {
+    /*
+     * Set a dummy thread context with preemption disabled to prevent
+     * scheduling functions called before the scheduler is running from
+     * triggering a context switch.
+     */
+    thread_init(&thread_dummy, NULL, NULL, "dummy", NULL, 0, 0);
+    runq->current = &thread_dummy;
+    runq->yield = false;
+    runq->preempt_level = 1;
     runq->nr_threads = 0;
 
     for (size_t i = 0; i < ARRAY_SIZE(runq->lists); i++) {
         thread_list_init(&runq->lists[i]);
     }
+}
 
+static void
+thread_runq_init_idle(struct thread_runq *runq)
+{
     runq->idle = thread_create_idle();
 }
 
 void
 thread_bootstrap(void)
 {
-    thread_runq_preinit(&thread_runq);
+    thread_runq_init(&thread_runq);
 }
 
 void
 thread_setup(void)
 {
-    thread_runq_init(&thread_runq);
+    thread_runq_init_idle(&thread_runq);
 }
 
 void
@@ -817,7 +851,7 @@ thread_yield(void)
     }
 
     eflags = thread_lock_scheduler();
-    thread_clear_yield(thread_self());
+    thread_runq_clear_yield(&thread_runq);
     thread_runq_schedule(&thread_runq);
     thread_unlock_scheduler(eflags, false);
 }
@@ -863,6 +897,6 @@ thread_report_tick(void)
 {
     assert(thread_scheduler_locked());
 
-    thread_set_yield(thread_self());
+    thread_runq_set_yield(&thread_runq);
     timer_report_tick();
 }
