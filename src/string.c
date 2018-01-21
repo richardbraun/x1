@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -75,19 +75,37 @@ memmove(void *dest, const void *src, size_t n)
     return dest;
 }
 
-char *
-strcpy(char *dest, const char *src)
+void *
+memset(void *s, int c, size_t n)
 {
-    char *tmp;
+    char *buffer;
+    size_t i;
 
-    tmp = dest;
+    buffer = s;
 
-    while ((*dest = *src) != '\0') {
-        dest++;
-        src++;
+    for (i = 0; i < n; i++) {
+        buffer[i] = c;
     }
 
-    return tmp;
+    return s;
+}
+
+int
+memcmp(const void *s1, const void *s2, size_t n)
+{
+    const unsigned char *a1, *a2;
+    size_t i;
+
+    a1 = s1;
+    a2 = s2;
+
+    for (i = 0; i < n; i++) {
+        if (a1[i] != a2[i]) {
+            return (int)a1[i] - (int)a2[i];
+        }
+    }
+
+    return 0;
 }
 
 size_t
@@ -102,6 +120,21 @@ strlen(const char *s)
     }
 
     return (s - start);
+}
+
+char *
+strcpy(char *dest, const char *src)
+{
+    char *tmp;
+
+    tmp = dest;
+
+    while ((*dest = *src) != '\0') {
+        dest++;
+        src++;
+    }
+
+    return tmp;
 }
 
 int
