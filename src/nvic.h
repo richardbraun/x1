@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,32 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-.section .text
-.code32
+#ifndef _NVIC_H
+#define _NVIC_H
 
-.global thread_load_context
-thread_load_context:
-  mov 4(%esp), %eax             /* Load the thread address */
-  mov (%eax), %esp              /* Switch to the thread stack */
-  jmp thread_restore_context
+void nvic_irq_enable(unsigned int irq);
 
-.global thread_switch_context
-thread_switch_context:
-  mov 4(%esp), %eax             /* Get prev thread address */
-  mov 8(%esp), %ecx             /* Get next thread address */
+void nvic_irq_disable(unsigned int irq);
 
-  push %ebp                     /* Save registers owned by the caller */
-  push %ebx
-  push %edi
-  push %esi
-
-  mov %esp, (%eax)              /* Save prev thread stack pointer */
-  mov (%ecx), %esp              /* Switch to the stack of the next thread */
-
-thread_restore_context:
-  pop %esi
-  pop %edi
-  pop %ebx
-  pop %ebp
-
-  ret
+#endif /* _NVIC_H */

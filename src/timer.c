@@ -140,7 +140,7 @@ static void
 timer_process_list(unsigned long now)
 {
     struct timer *timer;
-    uint32_t eflags;
+    uint32_t primask;
 
     mutex_lock(&timer_mutex);
 
@@ -160,7 +160,7 @@ timer_process_list(unsigned long now)
         mutex_lock(&timer_mutex);
     }
 
-    eflags = cpu_intr_save();
+    primask = cpu_intr_save();
 
     timer_list_empty = list_empty(&timer_list);
 
@@ -169,7 +169,7 @@ timer_process_list(unsigned long now)
         timer_wakeup_ticks = timer->ticks;
     }
 
-    cpu_intr_restore(eflags);
+    cpu_intr_restore(primask);
 
     mutex_unlock(&timer_mutex);
 }
@@ -178,13 +178,12 @@ static void
 timer_run(void *arg)
 {
     unsigned long now;
-    uint32_t eflags;
+    uint32_t primask;
 
     (void)arg;
 
     for (;;) {
-        thread_preempt_disable();
-        eflags = cpu_intr_save();
+        primask = thread_preempt_disable_intr_save();
 
         for (;;) {
             now = timer_ticks;
@@ -196,8 +195,7 @@ timer_run(void *arg)
             thread_sleep();
         }
 
-        cpu_intr_restore(eflags);
-        thread_preempt_enable();
+        thread_preempt_enable_intr_restore(primask);
 
         timer_process_list(now);
     }
@@ -215,7 +213,8 @@ timer_setup(void)
     mutex_init(&timer_mutex);
 
     error = thread_create(&timer_thread, timer_run, NULL,
-                          "timer", TIMER_STACK_SIZE, THREAD_MAX_PRIORITY);
+                          "timer", TIMER_STACK_SIZE, THREAD_MIN_PRIORITY);
+                          //"timer", TIMER_STACK_SIZE, THREAD_MAX_PRIORITY);
 
     if (error) {
         panic("timer: unable to create thread");
@@ -226,11 +225,11 @@ unsigned long
 timer_now(void)
 {
     unsigned long ticks;
-    uint32_t eflags;
+    uint32_t primask;
 
-    eflags = cpu_intr_save();
+    primask = cpu_intr_save();
     ticks = timer_ticks;
-    cpu_intr_restore(eflags);
+    cpu_intr_restore(primask);
 
     return ticks;
 }
@@ -259,7 +258,7 @@ void
 timer_schedule(struct timer *timer, unsigned long ticks)
 {
     struct timer *tmp;
-    uint32_t eflags;
+    uint32_t primask;
 
     mutex_lock(&timer_mutex);
 
@@ -302,10 +301,10 @@ timer_schedule(struct timer *timer, unsigned long ticks)
      * By holding the mutex while clearing the list empty flag, potential
      * spurious wake-ups are completely avoided.
      */
-    eflags = cpu_intr_save();
+    primask = cpu_intr_save();
     timer_list_empty = false;
     timer_wakeup_ticks = timer->ticks;
-    cpu_intr_restore(eflags);
+    cpu_intr_restore(primask);
 
     mutex_unlock(&timer_mutex);
 }

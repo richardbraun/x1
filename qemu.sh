@@ -2,8 +2,6 @@
 
 # Start the QEMU emulator with options doing the following :
 #  - GDB remote access on the local TCP port 1234
-#  - 64MB of physical memory (RAM)
-#  - No video device (automatically sets the first serial port as the console)
 #
 # In order to dump all exceptions and interrupts to a log file, you may add
 # the following options :
@@ -12,8 +10,9 @@
 #
 # Note that these debugging options do not work when KVM is enabled.
 
-qemu-system-i386 \
+qemu-system-arm \
+        -M netduino2 \
+        -cpu cortex-m3 \
         -gdb tcp::1234 \
-        -m 64 \
-        -nographic \
-        -kernel x1
+        -monitor stdio \
+        -d guest_errors -kernel x1

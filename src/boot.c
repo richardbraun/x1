@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  * Copyright (c) 2017 Jerko Lenstra.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,22 +22,34 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 #include <lib/macros.h>
 
 #include "boot.h"
+#include "cpu.h"
+#include "main.h"
 
-/*
- * This is the boot stack, used by the boot code to set the value of
- * the ESP register very early once control is passed to the kernel.
- *
- * It is aligned to 4 bytes to comply with the System V Intel 386 ABI [1].
- * While not strictly required since x86 supports unaligned accesses,
- * aligned accesses are faster, and the compiler generates instructions
- * accessing the stack that assume it's aligned.
- *
- * See the assembly code at the boot_start label in boot_asm.S.
- *
- * [1] http://www.sco.com/developers/devspecs/abi386-4.pdf
- */
-uint8_t boot_stack[BOOT_STACK_SIZE] __aligned(4);
+extern char _lma_data_addr;
+extern char _data_start;
+extern char _data_end;
+extern char _bss_start;
+extern char _bss_end;
+
+void boot_main(void);
+
+uint8_t boot_stack[BOOT_STACK_SIZE] __aligned(CPU_STACK_ALIGN);
+
+static void
+boot_copy_data(void)
+{
+    memcpy(&_data_start, &_lma_data_addr, &_data_end - &_data_start);
+}
+
+void
+boot_main(void)
+{
+    cpu_intr_disable();
+    boot_copy_data();
+    main();
+}

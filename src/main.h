@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,18 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-.section .text
-.code32
+#ifndef _MAIN_H
+#define _MAIN_H
 
-.global io_read
-io_read:
- mov 4(%esp), %edx              /* edx = port */
- in %dx, %al                    /* al = in(dx) */
- ret
+void main(void);
 
-.global io_write
-io_write:
- mov 8(%esp), %eax              /* eax = byte */
- mov 4(%esp), %edx              /* edx = port */
- out %al, %dx                   /* out(al, dx) */
- ret
+#endif /* _MAIN_H */

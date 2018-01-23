@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  * Copyright (c) 2017 Jerko Lenstra.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -24,11 +24,32 @@
 #ifndef _BOOT_H
 #define _BOOT_H
 
+#include <lib/macros.h>
+
+#include "cpu.h"
+
 /*
  * The size of the boot stack.
  *
  * See the boot_stack variable in boot.c.
  */
-#define BOOT_STACK_SIZE 4096
+#define BOOT_STACK_SIZE 512
+
+#if !P2ALIGNED(BOOT_STACK_SIZE, CPU_STACK_ALIGN)
+#error "misaligned boot stack"
+#endif
+
+#ifndef __ASSEMBLER__
+
+#include <stdint.h>
+
+extern uint8_t boot_stack[BOOT_STACK_SIZE];
+
+/*
+ * Entry point.
+ */
+void boot_start(void);
+
+#endif /* __ASSEMBLER__ */
 
 #endif /* _BOOT_H */

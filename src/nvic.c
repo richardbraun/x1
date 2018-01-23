@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -18,30 +18,59 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
- *
- *
- * I/O ports access.
- *
- * The x86 architecture is special in that, in addition to the physical memory
- * address space, it also has an I/O port space. Most modern processors use
- * the physical memory address space to access memory-mapped device memory and
- * registers, and that's also the case on x86, but the I/O port space is also
- * used for this purpose, at least for some legacy devices.
  */
-
-#ifndef _IO_H
-#define _IO_H
 
 #include <stdint.h>
 
-/*
- * Read a byte from an I/O port.
- */
-uint8_t io_read(uint16_t port);
+#include "cpu.h"
+#include "nvic.h"
 
-/*
- * Write a byte to an I/O port.
- */
-void io_write(uint16_t port, uint8_t byte);
+#define NVIC_BASE_ADDR 0xe000e100
 
-#endif /* _IO_H */
+struct nvic_regs {
+    uint32_t iser[16];
+    uint32_t icer[16];
+    uint32_t ispr[16];
+    uint32_t icpr[16];
+    uint32_t iabr[16];
+    uint32_t reserved[47];
+    uint32_t ipr[124];
+};
+
+static volatile struct nvic_regs *nvic_regs = (void *)NVIC_BASE_ADDR;
+
+static void
+nvic_get_dest(unsigned int irq, volatile uint32_t *array,
+              volatile uint32_t **reg, uint32_t *mask)
+{
+    *reg = &array[irq / 32];
+    *mask = (1 << (irq % 32));
+}
+
+void
+nvic_irq_enable(unsigned int irq)
+{
+    volatile uint32_t *reg;
+    uint32_t mask;
+    uint32_t primask;
+
+    nvic_get_dest(irq, nvic_regs->iser, &reg, &mask);
+
+    primask = cpu_intr_save();
+    *reg |= mask;
+    cpu_intr_restore(primask);
+}
+
+void
+nvic_irq_disable(unsigned int irq)
+{
+    volatile uint32_t *reg;
+    uint32_t mask;
+    uint32_t primask;
+
+    nvic_get_dest(irq, nvic_regs->icer, &reg, &mask);
+
+    primask = cpu_intr_save();
+    *reg |= mask;
+    cpu_intr_restore(primask);
+}

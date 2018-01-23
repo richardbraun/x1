@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -18,17 +18,32 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
- *
- *
- * Intel 8254 programmable interval timer (PIT) driver.
  */
 
-#ifndef _I8254_H
-#define _I8254_H
+#ifndef _ASM_H
+#define _ASM_H
+
+#ifndef __ASSEMBLER__
+#error "this header may only be included from assembly source files"
+#endif
 
 /*
- * Initialize the i8254 module.
+ * Enable the assembler to generate Thumb-2 instructions.
+ *
+ * See https://sourceware.org/binutils/docs/as/ARM_002dInstruction_002dSet.html#ARM_002dInstruction_002dSet
  */
-void i8254_setup(void);
+.syntax unified
 
-#endif /* _I8254_H */
+/*
+ * The .thumb_func directive tells the assembler to export the symbol as
+ * a thumb function, with bit 0 set.
+ *
+ * The .global directive tells the assembler to make the symbol global,
+ * i.e. to make it visible to other compilation units.
+ */
+#define ASM_FUNC(x)     \
+.thumb_func;            \
+.global x;              \
+x:
+
+#endif /* _ASM_H */

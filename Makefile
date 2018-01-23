@@ -8,16 +8,13 @@ VERSION = 1.0
 #
 # Here is an example of overriding the compiler :
 # $ make CC=clang
-CC = gcc
+CC = arm-none-eabi-gcc
 
 # C preprocessor flags.
 #
 # Use man gcc for more details. On Debian, the GNU FDL license is considered
 # non free, and as a result, the gcc-doc package is part of the non-free
 # components.
-
-# Generate code for a 32-bits environment.
-X1_CPPFLAGS = -m32
 
 # Do not search the standard system directories for header files.
 # The kernel is a free standing environment, where no host library can
@@ -80,13 +77,18 @@ X1_CFLAGS += -Wno-unneeded-internal-declaration
 # Set the language as C99 with GNU extensions.
 X1_CFLAGS += -std=gnu99
 
-# Build with optimizations as specified by the -O2 option.
-X1_CFLAGS += -O2
+# Build with optimizations as specified by the -Os option.
+X1_CFLAGS += -Os
 
 # Include debugging symbols, giving inspection tools a lot more debugging
 # data to work with, e.g. allowing them to translate between addresses and
 # source locations.
 X1_CFLAGS += -g
+
+X1_CFLAGS += -mcpu=cortex-m3
+X1_CFLAGS += -mthumb
+
+X1_CFLAGS += -fsigned-char
 
 # Target a free standing environment as defined by C99.
 #
@@ -125,9 +127,6 @@ X1_CFLAGS += -fno-strict-aliasing
 # global variable are made, this option will make the link fail.
 X1_CFLAGS += -fno-common
 
-# Disable all extended intruction sets that require special kernel support.
-X1_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx
-
 # Append user-provided compiler flags, if any.
 #
 # Here are some examples :
@@ -146,9 +145,6 @@ X1_CFLAGS += $(CFLAGS)
 # These are also GCC options, so use man gcc for more details. On Debian,
 # the GNU FDL license is considered non free, and as a result, the gcc-doc
 # package is part of the non-free components.
-
-# Link for a 32-bits environment.
-X1_LDFLAGS = -m32
 
 # Build a static executable, with no shared library.
 X1_LDFLAGS += -static
@@ -178,22 +174,20 @@ LIBS = -lgcc
 BINARY = x1
 
 SOURCES = \
-	src/boot_asm.S \
 	src/boot.c \
+	src/boot_asm.S \
 	src/condvar.c \
 	src/cpu.c \
 	src/cpu_asm.S \
-	src/i8254.c \
-	src/i8259.c \
-	src/io_asm.S \
 	src/main.c \
 	src/mem.c \
 	src/mutex.c \
+	src/nvic.c \
 	src/panic.c \
 	src/stdio.c \
 	src/string.c \
 	src/sw.c \
-	src/thread_asm.S \
+	src/systick.c \
 	src/thread.c \
 	src/timer.c \
 	src/uart.c

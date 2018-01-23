@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
- * Copyright (c) 2017 Jerko Lenstra.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,39 +18,11 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
- *
- *
- * Intel 8259 programmable interrupt controller (PIC) driver.
  */
 
-#ifndef _I8259_H
-#define _I8259_H
+#ifndef _SYSTICK_H
+#define _SYSTICK_H
 
-/*
- * Range of vectors used for IRQ handling, 8 per PIC.
- */
-#define I8259_NR_IRQ_VECTORS 16
+void systick_setup(void);
 
-/*
- * Initialize the i8259 module.
- */
-void i8259_setup(void);
-
-/*
- * Enable an IRQ line on the PIC.
- */
-void i8259_irq_enable(unsigned int irq);
-
-/*
- * Disable an IRQ line on the PIC.
- */
-void i8259_irq_disable(unsigned int irq);
-
-/*
- * Report an end of interrupt.
- *
- * This function must be called with interrupts disabled.
- */
-void i8259_irq_eoi(unsigned int irq);
-
-#endif /* _I8259_H */
+#endif /* _SYSTICK_H */

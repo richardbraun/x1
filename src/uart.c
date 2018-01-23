@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  * Copyright (c) 2017 Jerko Lenstra.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,7 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -32,40 +31,37 @@
 #include <lib/macros.h>
 
 #include "cpu.h"
-#include "io.h"
 #include "uart.h"
 #include "thread.h"
 
-#define UART_BAUD_RATE          115200
+#define UART_USART1_ADDR        0x40011000
+#define UART_USART1_IRQ         37
 
-#define UART_CLOCK              115200
-#define UART_DIVISOR            (UART_CLOCK / UART_BAUD_RATE)
+#define UART_SR_RXNE            0x00000020
+#define UART_SR_TXE             0x00000080
 
-#define UART_IRQ                4
-
-#define UART_IER_DATA           0x1
-
-#define UART_LCR_8BITS          0x3
-#define UART_LCR_STOP1          0
-#define UART_LCR_PARITY_NONE    0
-#define UART_LCR_DLAB           0x80
-
-#define UART_LSR_DATA_READY     0x01
-#define UART_LSR_TX_EMPTY       0x20
-
-#define UART_COM1_PORT          0x3F8
-#define UART_REG_DAT            0
-#define UART_REG_DIVL           0
-#define UART_REG_IER            1
-#define UART_REG_DIVH           1
-#define UART_REG_LCR            3
-#define UART_REG_LSR            5
+#define UART_CR1_RE             0x00000004
+#define UART_CR1_TE             0x00000008
+#define UART_CR1_RXNEIE         0x00000020
+#define UART_CR1_UE             0x00002000
 
 #define UART_BUFFER_SIZE        16
 
 #if !ISP2(UART_BUFFER_SIZE)
 #error "invalid buffer size"
 #endif
+
+struct uart_regs {
+    uint32_t sr;
+    uint32_t dr;
+    uint32_t brr;
+    uint32_t cr1;
+    uint32_t cr2;
+    uint32_t cr3;
+    uint32_t gtpr;
+};
+
+static volatile struct uart_regs *uart_usart1_regs;
 
 /*
  * Data shared between threads and the interrupt handler.
@@ -79,24 +75,24 @@ static struct thread *uart_waiter;
 static void
 uart_irq_handler(void *arg)
 {
-    uint8_t byte;
-    int error;
+    uint32_t reg;
     bool spurious;
+    int error;
 
     (void)arg;
 
     spurious = true;
 
     for (;;) {
-        byte = io_read(UART_COM1_PORT + UART_REG_LSR);
+        reg = uart_usart1_regs->sr;
 
-        if (!(byte & UART_LSR_DATA_READY)) {
+        if (!(reg & UART_SR_RXNE)) {
             break;
         }
 
         spurious = false;
-        byte = io_read(UART_COM1_PORT + UART_REG_DAT);
-        error = cbuf_pushb(&uart_cbuf, byte, false);
+        reg = uart_usart1_regs->dr;
+        error = cbuf_pushb(&uart_cbuf, (uint8_t)reg, false);
 
         if (error) {
             printf("uart: error: buffer full\n");
@@ -114,35 +110,40 @@ uart_setup(void)
 {
     cbuf_init(&uart_cbuf, uart_buffer, sizeof(uart_buffer));
 
-    io_write(UART_COM1_PORT + UART_REG_LCR, UART_LCR_DLAB);
-    io_write(UART_COM1_PORT + UART_REG_DIVL, UART_DIVISOR);
-    io_write(UART_COM1_PORT + UART_REG_DIVH, UART_DIVISOR >> 8);
-    io_write(UART_COM1_PORT + UART_REG_LCR, UART_LCR_8BITS | UART_LCR_STOP1
-                                            | UART_LCR_PARITY_NONE);
-    io_write(UART_COM1_PORT + UART_REG_IER, UART_IER_DATA);
+    uart_usart1_regs = (void *)UART_USART1_ADDR;
+    uart_usart1_regs->cr1 |= UART_CR1_UE
+                            | UART_CR1_RXNEIE
+                            | UART_CR1_TE
+                            | UART_CR1_RE;
 
-    cpu_irq_register(UART_IRQ, uart_irq_handler, NULL);
+    cpu_irq_register(UART_USART1_IRQ, uart_irq_handler, NULL);
 }
 
 static void
 uart_tx_wait(void)
 {
-    uint8_t byte;
+    /*
+     * XXX The QEMU stm32f2xx_usart driver doesn't seem to correctly emulate
+     * the UART_SR_TXE bit.
+     */
+#if 0
+    uint32_t sr;
 
     for (;;) {
-        byte = io_read(UART_COM1_PORT + UART_REG_LSR);
+        sr = uart_usart1_regs->sr;
 
-        if (byte & UART_LSR_TX_EMPTY) {
+        if (sr & UART_SR_TXE) {
             break;
         }
     }
+#endif
 }
 
 static void
 uart_write_byte(uint8_t byte)
 {
     uart_tx_wait();
-    io_write(UART_COM1_PORT + UART_REG_DAT, byte);
+    uart_usart1_regs->dr = byte;
 }
 
 void
@@ -158,10 +159,9 @@ uart_write(uint8_t byte)
 int
 uart_read(uint8_t *byte)
 {
-    int eflags, error;
+    int primask, error;
 
-    thread_preempt_disable();
-    eflags = cpu_intr_save();
+    primask = thread_preempt_disable_intr_save();
 
     if (uart_waiter) {
         error = EBUSY;
@@ -183,8 +183,7 @@ uart_read(uint8_t *byte)
     error = 0;
 
 out:
-    cpu_intr_restore(eflags);
-    thread_preempt_enable();
+    thread_preempt_enable_intr_restore(primask);
 
     return error;
 }

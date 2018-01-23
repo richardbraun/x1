@@ -33,7 +33,9 @@
 #error "GCC 4+ required"
 #endif
 
+#ifndef __ASSEMBLER__
 #include <stddef.h>
+#endif
 
 #define MACRO_BEGIN         ({
 #define MACRO_END           })

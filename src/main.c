@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,27 +20,20 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <lib/macros.h>
 #include <lib/shell.h>
 
 #include "cpu.h"
-#include "i8254.h"
-#include "i8259.h"
+#include "main.h"
 #include "mem.h"
 #include "panic.h"
 #include "sw.h"
+#include "systick.h"
 #include "thread.h"
 #include "timer.h"
 #include "uart.h"
-
-/*
- * XXX The Clang compiler apparently doesn't like the lack of prototype for
- * the main function in free standing mode.
- */
-void main(void);
 
 /*
  * This function is the main entry point for C code. It's called from
@@ -52,9 +45,8 @@ main(void)
 {
     thread_bootstrap();
     cpu_setup();
-    i8259_setup();
-    i8254_setup();
     uart_setup();
+    systick_setup();
     mem_setup();
     thread_setup();
     timer_setup();

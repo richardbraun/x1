@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,65 +20,54 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdarg.h>
 #include <stdint.h>
-#include <stdio.h>
 
+#include "panic.h"
+#include "systick.h"
 #include "thread.h"
-#include "uart.h"
 
-#define PRINTF_BUFFER_SIZE 1024
+#define SYSTICK_BASE_ADDR 0xe000e010
 
-/*
- * This implementation uses a global buffer in order to avoid allocating
- * from the stack, since stacks may be very small.
- */
-static char printf_buffer[PRINTF_BUFFER_SIZE];
+#define SYSTICK_CSR_ENABLE  0x1
+#define SYSTICK_CSR_TICKINT 0x2
+
+#define SYSTICK_CALIB_NOREF         0x80000000
+#define SYSTICK_CALIB_SKEW          0x40000000
+#define SYSTICK_CALIB_TENMS_MASK    0x00ffffff
+
+struct systick_regs {
+    uint32_t csr;
+    uint32_t rvr;
+    uint32_t cvr;
+    uint32_t calib;
+};
+
+static volatile struct systick_regs *systick_regs = (void *)SYSTICK_BASE_ADDR;
+
+static void
+systick_check_calib(void)
+{
+    uint32_t calib;
+
+    calib = systick_regs->calib;
+
+    if ((calib & SYSTICK_CALIB_NOREF)
+        || (calib & SYSTICK_CALIB_SKEW)
+        || (calib & SYSTICK_CALIB_TENMS_MASK) == 0) {
+        panic("systick: unusable");
+    }
+}
 
 void
-putchar(unsigned char c)
+systick_setup(void)
 {
-    uart_write(c);
-}
+    uint32_t tenms, counter;
 
-int
-getchar(void)
-{
-    uint8_t byte;
-    int error;
+    systick_check_calib();
 
-    error = uart_read(&byte);
-    return error ? EOF : byte;
-}
-
-int
-printf(const char *format, ...)
-{
-    va_list ap;
-    int length;
-
-    va_start(ap, format);
-    length = vprintf(format, ap);
-    va_end(ap);
-
-    return length;
-}
-
-int
-vprintf(const char *format, va_list ap)
-{
-    uint32_t primask;
-    int length;
-
-    primask = thread_preempt_disable_intr_save();
-
-    length = vsnprintf(printf_buffer, sizeof(printf_buffer), format, ap);
-
-    for (const char *ptr = printf_buffer; *ptr != '\0'; ptr++) {
-        uart_write((uint8_t)*ptr);
-    }
-
-    thread_preempt_enable_intr_restore(primask);
-
-    return length;
+    tenms = systick_regs->calib & SYSTICK_CALIB_TENMS_MASK;
+    counter = (tenms * 100) / THREAD_SCHED_FREQ;
+    systick_regs->rvr = counter;
+    systick_regs->cvr = 0;
+    systick_regs->csr = (SYSTICK_CSR_TICKINT | SYSTICK_CSR_ENABLE);
 }

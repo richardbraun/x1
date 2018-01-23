@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  * Copyright (c) 2017 Jerko Lenstra.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -21,47 +21,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "asm.h"
 #include "boot.h"
-
-/*
- * These are values used in the OS image header, as defined by the multiboot
- * specification.
- *
- * See https://www.gnu.org/software/grub/manual/multiboot/multiboot.html.
- */
-#define BOOT_HDR_MAGIC  0x1BADB002
-#define BOOT_HDR_CHECK  0x2BADB002
-#define BOOT_HDR_FLAGS  0x0
-
-/*
- * The .section directive tells the assembler which section the following
- * instructions should go into.
- *
- * The "a" flag makes the section allocatable, meaning memory will be
- * allocated for that section at load time.
- *
- * See https://sourceware.org/binutils/docs-2.29/as/Section.html#Section.
- */
-.section .hdr, "a"
-
-/* Generate code for i386 */
-.code32
-
-/*
- * The .int directive is used to emit verbatim machine words. Here, the
- * third word is the checksum of the first two, defined as "a 32-bit
- * unsigned value which, when added to the other magic fields (i.e.
- * ‘magic’ and ‘flags’), must have a 32-bit unsigned sum of zero".
- * Intuitively, adding the two first words and making the result negative
- * gives a value that, when added to the other fields, gives 0, despite
- * the word being unsigned. This trick works because values use two's
- * complement representation.
- *
- * See https://en.wikipedia.org/wiki/Two%27s_complement.
- */
-.int BOOT_HDR_MAGIC
-.int BOOT_HDR_FLAGS
-.int -(BOOT_HDR_FLAGS + BOOT_HDR_MAGIC)
+#include "cpu.h"
 
 /*
  * Put the following instructions into the .text section, which is
@@ -74,23 +36,36 @@
  * be run when control is passed to the kernel. The address of this symbol
  * is what the following command returns :
  *   readelf -aW x1 | grep "Entry point"
- *
- * The .global directive tells the assembler to make the symbol global,
- * i.e. to make it visible to other compilation units.
- *
- * When this code is run, the machine state should comply with what the
- * multiboot specification defines.
  */
-.global boot_start
-boot_start:
-  cmp $BOOT_HDR_CHECK, %eax     /* Compare EAX against the expected value */
-  jne .                         /* If not equal, jump to the current address.
-                                   This is an infinite loop. */
-  mov $boot_stack, %esp         /* Set up a stack */
-  add $BOOT_STACK_SIZE, %esp    /* On x86, stacks grow downwards, so start
-                                   at the top */
-  jmp main                      /* Jump to the C main function */
+ASM_FUNC(boot_start)
+  mov %r0, %r13                     /* load boot stack in PSP */
+  msr psp, %r0
+  mov %r0, $2                       /* use PSP as stack pointer */
+  msr control, %r0
+  isb                               /* force CONTROL register evaluation,
+                                       i.e. R13 is now PSP */
+  ldr %r0, =cpu_exc_stack           /* load exception stack in MSP */
+  add %r0, %r0, CPU_EXC_STACK_SIZE
+  msr msp, %r0
+  bl boot_clear_bss                 /* boot_clear_bss() */
+  b boot_main                       /* goto boot_main */
 
-loop:
-  hlt                           /* Never reached, for safety */
-  jmp loop
+/*
+ * Clear the .bss section.
+ *
+ * The stack, being part of the .bss section, must not be used to save
+ * data, since that data will be cleared.
+ */
+ASM_FUNC(boot_clear_bss)            /* void                             */
+  mov %r0, #0                       /* boot_clear_bss(void)             */
+  ldr %r1, =_bss_start              /* {                                */
+  ldr %r2, =_bss_end                /*     uint32_t *r1 = &_bss_start;  */
+                                    /*     uint32_t *r2 = &_bss_end;    */
+
+1:
+  cmp %r1, %r2                      /*     while (r1 < r2) {            */
+  it hs                             /*         *r1 = 0;                 */
+  bxhs %r14                         /*         r1++;                    */
+  str %r0, [%r1]                    /*     }                            */
+  add %r1, %r1, #4                  /* }                                */
+  b 1b

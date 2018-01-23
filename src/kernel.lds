@@ -29,7 +29,8 @@ ENTRY(boot_start)
  */
 MEMORY
 {
-    RAM : ORIGIN = 1M, LENGTH = 63M
+    FLASH : ORIGIN = 0x0,        LENGTH = 0x100000
+    RAM   : ORIGIN = 0x20000000, LENGTH = 0x20000
 }
 
 /*
@@ -50,7 +51,7 @@ MEMORY
  */
 PHDRS
 {
-    hdr     PT_LOAD FLAGS(4);
+    vectors PT_LOAD FLAGS(5);
     text    PT_LOAD FLAGS(5);
     data    PT_LOAD FLAGS(6);
 }
@@ -84,22 +85,28 @@ PHDRS
  */
 SECTIONS
 {
-    .hdr : {
-        *(.hdr)
-    } > RAM : hdr
+    .vectors : {
+        *(.vectors)
+    } > FLASH : vectors
 
     .text : {
         *(.text*)
-    } > RAM : text
+        *(.rodata*)
+    } > FLASH : text
+
+    _lma_data_addr = .;
 
     .data : {
-        *(.rodata*)
+        _data_start = .;
         *(.data*)
-    } > RAM : data
+        _data_end = .;
+    } > RAM AT > FLASH : data
 
     .bss : {
+        _bss_start = .;
         *(.bss)
-    } > RAM : data
+        _bss_end = .;
+    } > RAM AT > FLASH : data
 
     /*
      * The .eh_frame section is used by DWARF tools to unwind the stack,
@@ -109,5 +116,6 @@ SECTIONS
      */
     /DISCARD/ : {
         *(.eh_frame)
+        *(.ARM*)
     }
 }

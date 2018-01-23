@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,53 +24,54 @@
  *
  * The main functionality of this module is to provide interrupt control,
  * and registration of IRQ handlers.
- *
- * See the i8259 module.
  */
 
 #ifndef _CPU_H
 #define _CPU_H
 
-/*
- * EFLAGS register flags.
- *
- * See Intel 64 and IA-32 Architecture Software Developer's Manual, Volume 3
- * System Programming Guide, 2.3 System Flags and Fields in The EFLAGS Register.
- */
-#define CPU_EFL_IF      0x200   /* Enable maskable hardware interrupts */
+#include <lib/macros.h>
+
+#define CPU_STACK_ALIGN 8
+
+#define CPU_EXC_STACK_SIZE 4096
+
+#if !P2ALIGNED(CPU_EXC_STACK_SIZE, CPU_STACK_ALIGN)
+#error "misaligned exception stack"
+#endif
+
+#define CPU_EXC_RESET           1
+#define CPU_EXC_NMI             2
+#define CPU_EXC_HARDFAULT       3
+#define CPU_EXC_MEMMANAGE       4
+#define CPU_EXC_BUSFAULT        5
+#define CPU_EXC_USAGEFAULT      6
+#define CPU_EXC_SVCALL          11
+#define CPU_EXC_DEBUGMONITOR    12
+#define CPU_EXC_PENDSV          14
+#define CPU_EXC_SYSTICK         15
+#define CPU_EXC_IRQ_BASE        16
+#define CPU_EXC_IRQ_MAX         255
+#define CPU_NR_EXCEPTIONS       (CPU_EXC_IRQ_MAX + 1)
+#define CPU_NR_IRQS             (CPU_NR_EXCEPTIONS - CPU_EXC_IRQ_BASE)
 
 /*
- * GDT segment descriptor indexes, in bytes.
- *
- * See Intel 64 and IA-32 Architecture Software Developer's Manual, Volume 3
- * System Programming Guide, 3.4.1 Segment Descriptor Tables.
+ * PRIMASK register bits.
  */
-#define CPU_GDT_SEL_NULL    0x00
-#define CPU_GDT_SEL_CODE    0x08
-#define CPU_GDT_SEL_DATA    0x10
-#define CPU_GDT_SIZE        3
+#define CPU_PRIMASK_I           0x1
 
 /*
- * IDT segment descriptor indexes (exception and interrupt vectors).
- *
- * There are actually a lot more potential exceptions on x86. This list
- * only includes vectors that are handled by the implementation.
- *
- * See Intel 64 and IA-32 Architecture Software Developer's Manual, Volume 3
- * System Programming Guide, 6.3 Sources of Interrupts.
+ * Memory mapped processor registers.
  */
-#define CPU_IDT_VECT_DIV            0   /* Divide error */
-#define CPU_IDT_VECT_GP             13  /* General protection fault */
-#define CPU_IDT_VECT_IRQ_BASE       32  /* Base vector for external IRQs */
+#define CPU_REG_ICSR            0xe000ed04
 
-/*
- * Preprocessor declarations may be included by assembly source files, but
- * C declarations may not.
- */
+#define CPU_ICSR_PENDSVSET      0x10000000
+
 #ifndef __ASSEMBLER__
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "thread.h"
 
 /*
  * Type for IRQ handler functions.
@@ -79,37 +80,109 @@
  */
 typedef void (*cpu_irq_handler_fn_t)(void *arg);
 
+static inline void
+cpu_inst_barrier(void)
+{
+    asm volatile("isb" : : : "memory");
+}
+
+static inline uint32_t
+cpu_read_primask(void)
+{
+    uint32_t primask;
+
+    asm volatile("mrs %0, primask" : "=r" (primask));
+    return primask;
+}
+
 /*
  * Enable/disable interrupts.
  *
  * These functions imply a compiler barrier.
  * See thread_preempt_disable() in thread.c.
  */
-void cpu_intr_enable(void);
-void cpu_intr_disable(void);
+static inline void
+cpu_intr_disable(void)
+{
+    /*
+     * The cpsid instruction is self-synchronizing and doesn't require
+     * an instruction barrier.
+     */
+    asm volatile("cpsid i" : : : "memory");
+}
+
+static inline void
+cpu_intr_enable(void)
+{
+    /*
+     * The cpsie instruction isn't self-synchronizing. If pending interrupts
+     * must be processed immediately, add an instruction barrier after.
+     */
+    asm volatile("cpsie i" : : : "memory");
+}
 
 /*
- * Disable/restore interrupts.
+ * Disable/enable interrupts.
  *
  * Calls to these functions can safely nest.
  *
  * These functions imply a compiler barrier.
  * See thread_preempt_disable() in thread.c.
  */
-uint32_t cpu_intr_save(void);
-void cpu_intr_restore(uint32_t eflags);
+static inline uint32_t
+cpu_intr_save(void)
+{
+    uint32_t primask;
+
+    primask = cpu_read_primask();
+    cpu_intr_disable();
+    return primask;
+}
+
+static inline void
+cpu_intr_restore(uint32_t primask)
+{
+    asm volatile("msr primask, %0" : : "r" (primask) : "memory");
+}
 
 /*
  * Return true if interrupts are enabled.
  *
  * Implies a compiler barrier.
  */
-bool cpu_intr_enabled(void);
+static inline bool
+cpu_intr_enabled(void)
+{
+    uint32_t primask;
+
+    primask = cpu_read_primask();
+    return !(primask & CPU_PRIMASK_I);
+}
 
 /*
  * Enter an idle state until the next interrupt.
  */
-void cpu_idle(void);
+static inline void
+cpu_idle(void)
+{
+    asm volatile("wfi" : : : "memory");
+}
+
+static inline void
+cpu_raise_svcall(void)
+{
+    asm volatile("svc $0" : : : "memory");
+}
+
+static inline void
+cpu_raise_pendsv(void)
+{
+    volatile uint32_t *icsr;
+
+    icsr = (void *)CPU_REG_ICSR;
+    *icsr = CPU_ICSR_PENDSVSET;
+    cpu_inst_barrier();
+}
 
 /*
  * Completely halt execution on the processor.
@@ -125,6 +198,8 @@ void cpu_halt(void) __attribute__((noreturn));
  * given argument.
  */
 void cpu_irq_register(unsigned int irq, cpu_irq_handler_fn_t fn, void *arg);
+
+void * cpu_stack_forge(void *stack, size_t size, thread_fn_t fn, void *arg);
 
 /*
  * Initialize the cpu module.

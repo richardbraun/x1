@@ -144,7 +144,7 @@
  * the heap data, or any other statically allocated uninitialized data, in
  * the kernel image file.
  */
-#define MEM_HEAP_SIZE       (32 * 1024 * 1024)
+#define MEM_HEAP_SIZE       (64 * 1024)
 
 /*
  * Alignment required on addresses returned by mem_alloc().

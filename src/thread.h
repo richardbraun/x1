@@ -85,6 +85,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * The scheduling frequency is the rate at which the clock used for scheduling
@@ -105,7 +106,7 @@
 /*
  * Minimum size of thread stacks.
  */
-#define THREAD_STACK_MIN_SIZE 512
+#define THREAD_MIN_STACK_SIZE 512
 
 /*
  * Total number of thread priorities.
@@ -207,6 +208,9 @@ const char * thread_name(const struct thread *thread);
  * the processor if the scheduler determines that it should continue.
  */
 void thread_yield(void);
+
+void * thread_yield_from_svcall(void);
+void * thread_yield_from_pendsv(void *prev_sp);
 
 /*
  * Make the calling thread sleep until awaken.
@@ -312,11 +316,22 @@ void thread_preempt_disable(void);
 bool thread_preempt_enabled(void);
 
 /*
+ * Preemption control functions which also disable interrupts.
+ */
+uint32_t thread_preempt_disable_intr_save(void);
+void thread_preempt_enable_intr_restore(uint32_t primask);
+
+/*
  * Report a tick.
  *
  * This function must be called from interrupt context.
  */
 void thread_report_tick(void);
+
+/*
+ * Entry point for new threads.
+ */
+void thread_main(thread_fn_t fn, void *arg);
 
 /*
  * Enable the scheduler.
