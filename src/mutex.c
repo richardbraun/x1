@@ -64,6 +64,7 @@ void
 mutex_init(struct mutex *mutex)
 {
     list_init(&mutex->waiters);
+    mutex->owner = NULL;
     mutex->locked = false;
 }
 
