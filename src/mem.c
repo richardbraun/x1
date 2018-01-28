@@ -151,7 +151,7 @@
  *
  * See the description of mem_alloc() in the public header.
  */
-#define MEM_ALIGN           4
+#define MEM_ALIGN           8
 
 /*
  * Minimum size of a block.
@@ -208,7 +208,7 @@ struct mem_btag {
  */
 struct mem_block {
     struct mem_btag btag;
-    char payload[];
+    char payload[] __aligned(MEM_ALIGN);
 };
 
 /*

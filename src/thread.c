@@ -592,14 +592,6 @@ thread_init(struct thread *thread, thread_fn_t fn, void *arg,
             const char *name, char *stack, size_t stack_size,
             unsigned int priority)
 {
-    if (!P2ALIGNED((uint32_t)stack, CPU_STACK_ALIGN)) {
-        char *aligned_stack;
-
-        aligned_stack = (char *)(P2ALIGN((uintptr_t)stack, CPU_STACK_ALIGN));
-        stack_size -= (stack - aligned_stack);
-        stack = aligned_stack;
-    }
-
     /*
      * New threads are created in a state that is similar to preempted threads,
      * since it makes running them for the first time indistinguishable from
