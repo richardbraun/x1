@@ -159,9 +159,6 @@ X1_LDFLAGS += -nostdlib
 # disabling it makes the linker script simpler.
 X1_LDFLAGS += -Xlinker --build-id=none
 
-# Pass the linker script path to the linker.
-X1_LDFLAGS += -Xlinker -T src/kernel.lds
-
 # Append user-provided linker flags, if any.
 X1_LDFLAGS += $(LDFLAGS)
 
@@ -172,6 +169,8 @@ X1_LDFLAGS += $(LDFLAGS)
 LIBS = -lgcc
 
 BINARY = x1
+
+LDS = src/kernel.lds
 
 SOURCES = \
 	src/boot.c \
@@ -199,14 +198,17 @@ SOURCES += \
 
 OBJECTS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
-$(BINARY): $(OBJECTS)
-	$(CC) -o $@ $(X1_LDFLAGS) $^ $(LIBS)
+$(BINARY): $(LDS) $(OBJECTS)
+	$(CC) -o $@ $(X1_LDFLAGS) -Xlinker -T $(LDS) $(OBJECTS) $(LIBS)
 
 %.o: %.c
 	$(CC) $(X1_CPPFLAGS) $(X1_CFLAGS) -c -o $@ $<
 
 %.o: %.S
 	$(CC) $(X1_CPPFLAGS) $(X1_CFLAGS) -c -o $@ $<
+
+%.lds: %.lds.S
+	$(CC) -E -P $(X1_CPPFLAGS) -o $@ $<
 
 clean:
 	rm -f $(BINARY) $(OBJECTS)
@@ -223,4 +225,4 @@ clean:
 # technique.
 #
 # [1] https://git.sceen.net/rbraun/x15.git/
-.PHONY: clean $(SOURCES)
+.PHONY: clean $(SOURCES) $(LDS).S
