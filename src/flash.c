@@ -24,7 +24,11 @@
 
 #include "flash.h"
 
-#define FLASH_BASE_ADDR 0x40023c00
+#define FLASH_BASE_ADDR         0x40023c00
+
+#define FLASH_ACR_PRFTEN        0x00000100
+#define FLASH_ACR_ICEN          0x00000200
+#define FLASH_ACR_DCEN          0x00000400
 
 struct flash_regs {
     uint32_t acr;
@@ -43,8 +47,9 @@ flash_setup(void)
     /*
      * See 3.5.1 Relation between CPU clock frequency
      * and Flash memory read time.
-     *
-     * TODO Prefect and caches.
      */
-    flash_regs->acr |= 5;
+    flash_regs->acr |= FLASH_ACR_DCEN
+                       | FLASH_ACR_ICEN
+                       | FLASH_ACR_PRFTEN
+                       | 5;
 }
