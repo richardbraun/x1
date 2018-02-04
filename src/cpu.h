@@ -167,9 +167,7 @@ cpu_intr_enabled(void)
 static inline void
 cpu_idle(void)
 {
-#if LOW_POWER
     asm volatile("wfi" : : : "memory");
-#endif
 }
 
 static inline void
