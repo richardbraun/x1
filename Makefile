@@ -85,9 +85,10 @@ X1_CFLAGS += -Os
 # source locations.
 X1_CFLAGS += -g
 
-X1_CFLAGS += -mcpu=cortex-m3
+X1_CFLAGS += -mcpu=cortex-m4
 X1_CFLAGS += -mthumb
 
+X1_CFLAGS += -fno-PIE
 X1_CFLAGS += -fsigned-char
 
 # Target a free standing environment as defined by C99.
@@ -178,11 +179,14 @@ SOURCES = \
 	src/condvar.c \
 	src/cpu.c \
 	src/cpu_asm.S \
+	src/flash.c \
+	src/gpio.c \
 	src/main.c \
 	src/mem.c \
 	src/mutex.c \
 	src/nvic.c \
 	src/panic.c \
+	src/rcc.c \
 	src/stdio.c \
 	src/string.c \
 	src/sw.c \
@@ -199,7 +203,7 @@ SOURCES += \
 OBJECTS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
 $(BINARY): $(LDS) $(OBJECTS)
-	$(CC) -o $@ $(X1_LDFLAGS) -Xlinker -T $(LDS) $(OBJECTS) $(LIBS)
+	$(CC) $(X1_CPPFLAGS) $(X1_CFLAGS) -o $@ $(X1_LDFLAGS) -Xlinker -T $(LDS) $(OBJECTS) $(LIBS)
 
 %.o: %.c
 	$(CC) $(X1_CPPFLAGS) $(X1_CFLAGS) -c -o $@ $<

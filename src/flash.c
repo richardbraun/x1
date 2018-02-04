@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Richard Braun.
- * Copyright (c) 2017 Jerko Lenstra.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,40 +21,30 @@
  */
 
 #include <stdint.h>
-#include <string.h>
 
-#include <lib/macros.h>
-
-#include "boot.h"
-#include "cpu.h"
 #include "flash.h"
-#include "gpio.h"
-#include "main.h"
-#include "rcc.h"
 
-extern char _lma_data_addr;
-extern char _data_start;
-extern char _data_end;
-extern char _bss_start;
-extern char _bss_end;
+#define FLASH_BASE_ADDR 0x40023c00
 
-void boot_main(void);
+struct flash_regs {
+    uint32_t acr;
+    uint32_t keyr;
+    uint32_t optkeyr;
+    uint32_t sr;
+    uint32_t cr;
+    uint32_t optcr;
+};
 
-uint8_t boot_stack[BOOT_STACK_SIZE] __aligned(CPU_STACK_ALIGN);
-
-static void
-boot_copy_data(void)
-{
-    memcpy(&_data_start, &_lma_data_addr, &_data_end - &_data_start);
-}
+static volatile struct flash_regs *flash_regs = (void *)FLASH_BASE_ADDR;
 
 void
-boot_main(void)
+flash_setup(void)
 {
-    cpu_intr_disable();
-    boot_copy_data();
-    flash_setup();
-    rcc_setup();
-    gpio_setup();
-    main();
+    /*
+     * See 3.5.1 Relation between CPU clock frequency
+     * and Flash memory read time.
+     *
+     * TODO Prefect and caches.
+     */
+    flash_regs->acr |= 5;
 }

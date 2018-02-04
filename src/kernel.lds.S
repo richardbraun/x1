@@ -29,8 +29,9 @@ ENTRY(boot_start)
  */
 MEMORY
 {
-    FLASH : ORIGIN = 0x0,        LENGTH = 0x100000
-    RAM   : ORIGIN = 0x20000000, LENGTH = 0x20000
+    FLASH_ALIAS : ORIGIN = 0x00000000, LENGTH = 0x100000
+    FLASH       : ORIGIN = 0x08000000, LENGTH = 0x100000
+    RAM         : ORIGIN = 0x20000000, LENGTH = 0x1C000
 }
 
 /*
@@ -54,6 +55,12 @@ PHDRS
     vectors PT_LOAD FLAGS(5);
     text    PT_LOAD FLAGS(5);
     data    PT_LOAD FLAGS(6);
+
+    /*
+     * XXX Currently required to avoid warning, probably because of
+     * different alignments of .data and .bss.
+     */
+    bss     PT_LOAD FLAGS(6);
 }
 
 /*
@@ -87,12 +94,12 @@ SECTIONS
 {
     .vectors : {
         *(.vectors)
-    } > FLASH : vectors
+    } > FLASH_ALIAS AT > FLASH : vectors
 
     .text : {
         *(.text*)
         *(.rodata*)
-    } > FLASH : text
+    } > FLASH_ALIAS AT > FLASH : text
 
     _lma_data_addr = .;
 
@@ -106,7 +113,7 @@ SECTIONS
         _bss_start = .;
         *(.bss)
         _bss_end = .;
-    } > RAM AT > FLASH : data
+    } > RAM AT > FLASH : bss
 
     /*
      * The .eh_frame section is used by DWARF tools to unwind the stack,

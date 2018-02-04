@@ -22,14 +22,15 @@
 
 #include <stdint.h>
 
+#include "cpu.h"
 #include "panic.h"
 #include "systick.h"
 #include "thread.h"
 
 #define SYSTICK_BASE_ADDR 0xe000e010
 
-#define SYSTICK_CSR_ENABLE  0x1
-#define SYSTICK_CSR_TICKINT 0x2
+#define SYSTICK_CSR_ENABLE      0x1
+#define SYSTICK_CSR_TICKINT     0x2
 
 #define SYSTICK_CALIB_NOREF         0x80000000
 #define SYSTICK_CALIB_SKEW          0x40000000
@@ -51,9 +52,7 @@ systick_check_calib(void)
 
     calib = systick_regs->calib;
 
-    if ((calib & SYSTICK_CALIB_NOREF)
-        || (calib & SYSTICK_CALIB_SKEW)
-        || (calib & SYSTICK_CALIB_TENMS_MASK) == 0) {
+    if (calib & SYSTICK_CALIB_NOREF) {
         panic("systick: unusable");
     }
 }
@@ -61,12 +60,11 @@ systick_check_calib(void)
 void
 systick_setup(void)
 {
-    uint32_t tenms, counter;
+    uint32_t counter;
 
     systick_check_calib();
 
-    tenms = systick_regs->calib & SYSTICK_CALIB_TENMS_MASK;
-    counter = (tenms * 100) / THREAD_SCHED_FREQ;
+    counter = (CPU_FREQ / 8) / THREAD_SCHED_FREQ;
     systick_regs->rvr = counter;
     systick_regs->cvr = 0;
     systick_regs->csr = (SYSTICK_CSR_TICKINT | SYSTICK_CSR_ENABLE);

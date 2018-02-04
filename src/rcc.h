@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Richard Braun.
- * Copyright (c) 2017 Jerko Lenstra.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,41 +20,23 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <string.h>
+#ifndef _RCC_H
+#define _RCC_H
 
-#include <lib/macros.h>
-
-#include "boot.h"
 #include "cpu.h"
-#include "flash.h"
-#include "gpio.h"
-#include "main.h"
-#include "rcc.h"
 
-extern char _lma_data_addr;
-extern char _data_start;
-extern char _data_end;
-extern char _bss_start;
-extern char _bss_end;
+#define RCC_FREQ_SYSCLK         CPU_FREQ
+#define RCC_FREQ_HSE            12000000
+#define RCC_FREQ_VCO_IN         2000000
+#define RCC_FREQ_VCO_OUT        336000000
+#define RCC_FREQ_PLLP           RCC_FREQ_SYSCLK
+#define RCC_FREQ_PLLQ           48000000
+#define RCC_FREQ_APB1           42000000
+#define RCC_FREQ_APB2           84000000
 
-void boot_main(void);
+/*
+ * Initialize the rcc module.
+ */
+void rcc_setup(void);
 
-uint8_t boot_stack[BOOT_STACK_SIZE] __aligned(CPU_STACK_ALIGN);
-
-static void
-boot_copy_data(void)
-{
-    memcpy(&_data_start, &_lma_data_addr, &_data_end - &_data_start);
-}
-
-void
-boot_main(void)
-{
-    cpu_intr_disable();
-    boot_copy_data();
-    flash_setup();
-    rcc_setup();
-    gpio_setup();
-    main();
-}
+#endif /* _RCC_H */

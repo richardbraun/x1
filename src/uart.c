@@ -31,11 +31,15 @@
 #include <lib/macros.h>
 
 #include "cpu.h"
+#include "rcc.h"
 #include "uart.h"
 #include "thread.h"
 
-#define UART_USART1_ADDR        0x40011000
-#define UART_USART1_IRQ         37
+#define UART_BAUD_RATE          115200
+#define UART_CLK                RCC_FREQ_APB2
+
+#define UART_USART6_ADDR        0x40011400
+#define UART_USART6_IRQ         71
 
 #define UART_SR_RXNE            0x00000020
 #define UART_SR_TXE             0x00000080
@@ -44,6 +48,10 @@
 #define UART_CR1_TE             0x00000008
 #define UART_CR1_RXNEIE         0x00000020
 #define UART_CR1_UE             0x00002000
+
+#define UART_BRR_FRACTION_MASK  0x0000000f
+#define UART_BRR_MANTISSA_MASK  0x0000fff0
+#define UART_BRR_MANTISSA_SHIFT 4
 
 #define UART_BUFFER_SIZE        16
 
@@ -61,7 +69,7 @@ struct uart_regs {
     uint32_t gtpr;
 };
 
-static volatile struct uart_regs *uart_usart1_regs;
+static volatile struct uart_regs *uart_regs = (void *)UART_USART6_ADDR;
 
 /*
  * Data shared between threads and the interrupt handler.
@@ -84,14 +92,14 @@ uart_irq_handler(void *arg)
     spurious = true;
 
     for (;;) {
-        reg = uart_usart1_regs->sr;
+        reg = uart_regs->sr;
 
         if (!(reg & UART_SR_RXNE)) {
             break;
         }
 
         spurious = false;
-        reg = uart_usart1_regs->dr;
+        reg = uart_regs->dr;
         error = cbuf_pushb(&uart_cbuf, (uint8_t)reg, false);
 
         if (error) {
@@ -108,42 +116,44 @@ uart_irq_handler(void *arg)
 void
 uart_setup(void)
 {
+    uint32_t divx100, mantissa, fraction;
+
     cbuf_init(&uart_cbuf, uart_buffer, sizeof(uart_buffer));
 
-    uart_usart1_regs = (void *)UART_USART1_ADDR;
-    uart_usart1_regs->cr1 |= UART_CR1_UE
-                            | UART_CR1_RXNEIE
-                            | UART_CR1_TE
-                            | UART_CR1_RE;
+    divx100 = UART_CLK / (16 * (UART_BAUD_RATE / 100));
+    fraction = ((divx100 % 100) * 16) / 100;
+    mantissa = divx100 / 100;
 
-    cpu_irq_register(UART_USART1_IRQ, uart_irq_handler, NULL);
+    uart_regs->brr = ((mantissa << UART_BRR_MANTISSA_SHIFT)
+                      & UART_BRR_MANTISSA_MASK)
+                     | (fraction & UART_BRR_FRACTION_MASK);
+    uart_regs->cr1 |= UART_CR1_UE
+                      | UART_CR1_RXNEIE
+                      | UART_CR1_TE
+                      | UART_CR1_RE;
+
+    cpu_irq_register(UART_USART6_IRQ, uart_irq_handler, NULL);
 }
 
 static void
 uart_tx_wait(void)
 {
-    /*
-     * XXX The QEMU stm32f2xx_usart driver doesn't seem to correctly emulate
-     * the UART_SR_TXE bit.
-     */
-#if 0
     uint32_t sr;
 
     for (;;) {
-        sr = uart_usart1_regs->sr;
+        sr = uart_regs->sr;
 
         if (sr & UART_SR_TXE) {
             break;
         }
     }
-#endif
 }
 
 static void
 uart_write_byte(uint8_t byte)
 {
     uart_tx_wait();
-    uart_usart1_regs->dr = byte;
+    uart_regs->dr = byte;
 }
 
 void

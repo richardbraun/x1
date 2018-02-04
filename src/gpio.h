@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Richard Braun.
- * Copyright (c) 2017 Jerko Lenstra.
+ * Copyright (c) 2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,41 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <string.h>
+#ifndef _GPIO_H
+#define _GPIO_h
 
-#include <lib/macros.h>
+/*
+ * Initialize the gpio module.
+ */
+void gpio_setup(void);
 
-#include "boot.h"
-#include "cpu.h"
-#include "flash.h"
-#include "gpio.h"
-#include "main.h"
-#include "rcc.h"
-
-extern char _lma_data_addr;
-extern char _data_start;
-extern char _data_end;
-extern char _bss_start;
-extern char _bss_end;
-
-void boot_main(void);
-
-uint8_t boot_stack[BOOT_STACK_SIZE] __aligned(CPU_STACK_ALIGN);
-
-static void
-boot_copy_data(void)
-{
-    memcpy(&_data_start, &_lma_data_addr, &_data_end - &_data_start);
-}
-
-void
-boot_main(void)
-{
-    cpu_intr_disable();
-    boot_copy_data();
-    flash_setup();
-    rcc_setup();
-    gpio_setup();
-    main();
-}
+#endif /* _GPIO_H */

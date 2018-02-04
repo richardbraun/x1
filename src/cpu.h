@@ -31,6 +31,8 @@
 
 #include <lib/macros.h>
 
+#define CPU_FREQ 168000000
+
 #define CPU_STACK_ALIGN 8
 
 #define CPU_EXC_STACK_SIZE 4096
@@ -165,7 +167,9 @@ cpu_intr_enabled(void)
 static inline void
 cpu_idle(void)
 {
+#if LOW_POWER
     asm volatile("wfi" : : : "memory");
+#endif
 }
 
 static inline void
