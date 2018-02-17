@@ -158,7 +158,8 @@ uart_write(uint8_t byte)
 int
 uart_read(uint8_t *byte)
 {
-    int eflags, error;
+    uint32_t eflags;
+    int error;
 
     thread_preempt_disable();
     eflags = cpu_intr_save();
