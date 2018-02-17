@@ -410,17 +410,15 @@ static void
 thread_runq_tick(struct thread_runq *runq)
 {
     struct thread_list *list;
+    unsigned int priority;
 
     assert(!cpu_intr_enabled());
     assert(!thread_preempt_enabled());
 
-    if (runq->current == runq->idle) {
-        return;
-    }
+    priority = runq->current->priority;
+    list = thread_runq_get_list(runq, priority);
 
-    list = thread_runq_get_list(runq, runq->current->priority);
-
-    if (thread_list_singular(list)) {
+    if (thread_list_singular(list) && (priority != THREAD_IDLE_PRIORITY)) {
         return;
     }
 
