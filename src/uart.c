@@ -159,7 +159,8 @@ uart_write(uint8_t byte)
 int
 uart_read(uint8_t *byte)
 {
-    int primask, error;
+    uint32_t primask;
+    int error;
 
     primask = thread_preempt_disable_intr_save();
 
