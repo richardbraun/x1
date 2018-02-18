@@ -195,7 +195,7 @@
  * bit is always 0. Therefore, this bit is used to store the allocation flag.
  */
 struct mem_btag {
-    size_t value;
+    size_t value __aligned(MEM_ALIGN);
 };
 
 /*
@@ -208,7 +208,7 @@ struct mem_btag {
  */
 struct mem_block {
     struct mem_btag btag;
-    char payload[] __aligned(MEM_ALIGN);
+    char payload[];
 };
 
 /*
