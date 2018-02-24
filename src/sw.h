@@ -23,12 +23,12 @@
  * Stopwatch demo application.
  */
 
-#ifndef _SW_H
-#define _SW_H
+#ifndef SW_H
+#define SW_H
 
 /*
  * Initialize the sw module.
  */
 void sw_setup(void);
 
-#endif /* _SW_H */
+#endif /* SW_H */

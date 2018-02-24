@@ -113,8 +113,8 @@
  * particular, a mutex cannot be locked recursively.
  */
 
-#ifndef _MUTEX_H
-#define _MUTEX_H
+#ifndef MUTEX_H
+#define MUTEX_H
 
 #include <stdbool.h>
 
@@ -162,4 +162,4 @@ int mutex_trylock(struct mutex *mutex);
  */
 void mutex_unlock(struct mutex *mutex);
 
-#endif /* _MUTEX_H */
+#endif /* MUTEX_H */

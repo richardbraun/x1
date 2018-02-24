@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _ASSERT_H
-#define _ASSERT_H
+#ifndef ASSERT_H
+#define ASSERT_H
 
 #ifdef NDEBUG
 
@@ -50,4 +50,4 @@ MACRO_END
 
 #endif /* NDEBUG */
 
-#endif /* _ASSERT_H */
+#endif /* ASSERT_H */

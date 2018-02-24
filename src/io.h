@@ -29,8 +29,8 @@
  * used for this purpose, at least for some legacy devices.
  */
 
-#ifndef _IO_H
-#define _IO_H
+#ifndef IO_H
+#define IO_H
 
 #include <stdint.h>
 
@@ -44,4 +44,4 @@ uint8_t io_read(uint16_t port);
  */
 void io_write(uint16_t port, uint8_t byte);
 
-#endif /* _IO_H */
+#endif /* IO_H */

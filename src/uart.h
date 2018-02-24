@@ -30,8 +30,8 @@
  * communication.
  */
 
-#ifndef _UART_H
-#define _UART_H
+#ifndef UART_H
+#define UART_H
 
 #include <stdint.h>
 
@@ -58,4 +58,4 @@ void uart_write(uint8_t byte);
  */
 int uart_read(uint8_t *byte);
 
-#endif /* _UART_H */
+#endif /* UART_H */

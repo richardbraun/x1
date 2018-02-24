@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _STRING_H
-#define _STRING_H
+#ifndef STRING_H
+#define STRING_H
 
 #include <stddef.h>
 
@@ -35,4 +35,4 @@ int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
 char * strerror(int errnum);
 
-#endif /* _STRING_H */
+#endif /* STRING_H */

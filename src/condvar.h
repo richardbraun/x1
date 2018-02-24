@@ -40,8 +40,8 @@
  * [1] http://pubs.opengroup.org/onlinepubs/9699919799/
  */
 
-#ifndef _CONDVAR_H
-#define _CONDVAR_H
+#ifndef CONDVAR_H
+#define CONDVAR_H
 
 #include <lib/list.h>
 
@@ -146,4 +146,4 @@ void condvar_broadcast(struct condvar *condvar);
  */
 void condvar_wait(struct condvar *condvar, struct mutex *mutex);
 
-#endif /* _CONDVAR_H */
+#endif /* CONDVAR_H */

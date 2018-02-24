@@ -20,9 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _LIMITS_H
-#define _LIMITS_H
+#ifndef LIMITS_H
+#define LIMITS_H
 
 #define CHAR_BIT 8
 
-#endif /* _LIMITS_H */
+#endif /* LIMITS_H */

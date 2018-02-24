@@ -80,8 +80,8 @@
  * preemption enabled during the critical section.
  */
 
-#ifndef _THREAD_H
-#define _THREAD_H
+#ifndef THREAD_H
+#define THREAD_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -323,4 +323,4 @@ void thread_report_tick(void);
  */
 void thread_enable_scheduler(void) __attribute__((noreturn));
 
-#endif /* _THREAD_H */
+#endif /* THREAD_H */

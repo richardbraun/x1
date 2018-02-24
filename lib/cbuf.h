@@ -26,8 +26,8 @@
  * Circular byte buffer.
  */
 
-#ifndef _CBUF_H
-#define _CBUF_H
+#ifndef CBUF_H
+#define CBUF_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -147,4 +147,4 @@ int cbuf_write(struct cbuf *cbuf, size_t index, const void *buf, size_t size);
  */
 int cbuf_read(const struct cbuf *cbuf, size_t index, void *buf, size_t *sizep);
 
-#endif /* _CBUF_H */
+#endif /* CBUF_H */

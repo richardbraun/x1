@@ -21,8 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _BOOT_H
-#define _BOOT_H
+#ifndef BOOT_H
+#define BOOT_H
 
 /*
  * The size of the boot stack.
@@ -31,4 +31,4 @@
  */
 #define BOOT_STACK_SIZE 4096
 
-#endif /* _BOOT_H */
+#endif /* BOOT_H */

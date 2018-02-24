@@ -27,8 +27,8 @@
  * memory allocated at compile time by the linker.
  */
 
-#ifndef _MEM_H
-#define _MEM_H
+#ifndef MEM_H
+#define MEM_H
 
 #include <stddef.h>
 
@@ -89,4 +89,4 @@ void * mem_alloc(size_t size);
  */
 void mem_free(void *ptr);
 
-#endif /* _MEM_H */
+#endif /* MEM_H */

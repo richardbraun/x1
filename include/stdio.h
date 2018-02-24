@@ -23,8 +23,8 @@
  * Subset of the standard C stdio interface.
  */
 
-#ifndef _STDIO_H
-#define _STDIO_H
+#ifndef STDIO_H
+#define STDIO_H
 
 #include <stdarg.h>
 
@@ -53,4 +53,4 @@ int vprintf(const char *format, va_list ap)
 #define sscanf      fmt_sscanf
 #define vsscanf     fmt_vsscanf
 
-#endif /* _STDIO_H */
+#endif /* STDIO_H */

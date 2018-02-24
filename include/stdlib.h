@@ -20,12 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _STDLIB_H
-#define _STDLIB_H
+#ifndef STDLIB_H
+#define STDLIB_H
 
 #include <src/mem.h>
 
 #define malloc  mem_alloc
 #define free    mem_free
 
-#endif /* _STDLIB_H */
+#endif /* STDLIB_H */

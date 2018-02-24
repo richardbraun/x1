@@ -23,8 +23,8 @@
  * Software timer module.
  */
 
-#ifndef _TIMER_H
-#define _TIMER_H
+#ifndef TIMER_H
+#define TIMER_H
 
 #include <stdbool.h>
 
@@ -133,4 +133,4 @@ unsigned long timer_get_time(const struct timer *timer);
  */
 void timer_report_tick(void);
 
-#endif /* _TIMER_H */
+#endif /* TIMER_H */

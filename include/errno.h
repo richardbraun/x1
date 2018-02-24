@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _ERRNO_H
-#define _ERRNO_H
+#ifndef ERRNO_H
+#define ERRNO_H
 
 #define EINVAL      1
 #define EAGAIN      2
@@ -30,4 +30,4 @@
 #define EBUSY       5
 #define EEXIST      6
 
-#endif /* _ERRNO_H */
+#endif /* ERRNO_H */

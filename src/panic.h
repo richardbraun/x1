@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _PANIC_H
-#define _PANIC_H
+#ifndef PANIC_H
+#define PANIC_H
 
 #include <lib/macros.h>
 
@@ -29,4 +29,4 @@ void panic(const char *format, ...)
     __attribute__((noreturn))
     __attribute__((format(printf, 1, 2)));
 
-#endif /* _PANIC_H */
+#endif /* PANIC_H */

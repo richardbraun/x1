@@ -28,8 +28,8 @@
  * See the i8259 module.
  */
 
-#ifndef _CPU_H
-#define _CPU_H
+#ifndef CPU_H
+#define CPU_H
 
 /*
  * EFLAGS register flags.
@@ -133,4 +133,4 @@ void cpu_setup(void);
 
 #endif /* __ASSEMBLER__ */
 
-#endif /* _CPU_H */
+#endif /* CPU_H */
