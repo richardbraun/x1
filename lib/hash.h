@@ -117,7 +117,7 @@ hash_str(const char *str, unsigned int bits)
         hash = ((hash << 5) - hash) + c;
     }
 
-    return hash & ((1 << bits) - 1);
+    return hash & ((1UL << bits) - 1);
 }
 
 #endif /* HASH_H */

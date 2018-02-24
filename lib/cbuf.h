@@ -70,6 +70,12 @@ cbuf_size(const struct cbuf *cbuf)
     return cbuf->end - cbuf->start;
 }
 
+static inline size_t
+cbuf_avail_size(const struct cbuf *cbuf)
+{
+    return cbuf_capacity(cbuf) - cbuf_size(cbuf);
+}
+
 static inline void
 cbuf_clear(struct cbuf *cbuf)
 {

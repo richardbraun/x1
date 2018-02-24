@@ -394,25 +394,25 @@ for (entry = list_last_entry(list, typeof(*entry), member),         \
  * These macros can be replaced by actual functions in an environment
  * that provides lockless synchronization such as RCU.
  */
-#define llsync_store_ptr(ptr, value)    ((ptr) = (value))
-#define llsync_load_ptr(ptr)            (ptr)
+#define rcu_store_ptr(ptr, value)       ((ptr) = (value))
+#define rcu_load_ptr(ptr)               (ptr)
 
 /*
  * Return the first node of a list.
  */
 static inline struct list *
-list_llsync_first(const struct list *list)
+list_rcu_first(const struct list *list)
 {
-    return llsync_load_ptr(list->next);
+    return rcu_load_ptr(list->next);
 }
 
 /*
  * Return the node next to the given node.
  */
 static inline struct list *
-list_llsync_next(const struct list *node)
+list_rcu_next(const struct list *node)
 {
-    return llsync_load_ptr(node->next);
+    return rcu_load_ptr(node->next);
 }
 
 /*
@@ -421,11 +421,11 @@ list_llsync_next(const struct list *node)
  * This function is private.
  */
 static inline void
-list_llsync_add(struct list *prev, struct list *next, struct list *node)
+list_rcu_add(struct list *prev, struct list *next, struct list *node)
 {
     node->next = next;
     node->prev = prev;
-    llsync_store_ptr(prev->next, node);
+    rcu_store_ptr(prev->next, node);
     next->prev = node;
 }
 
@@ -433,36 +433,36 @@ list_llsync_add(struct list *prev, struct list *next, struct list *node)
  * Insert a node at the head of a list.
  */
 static inline void
-list_llsync_insert_head(struct list *list, struct list *node)
+list_rcu_insert_head(struct list *list, struct list *node)
 {
-    list_llsync_add(list, list->next, node);
+    list_rcu_add(list, list->next, node);
 }
 
 /*
  * Insert a node at the tail of a list.
  */
 static inline void
-list_llsync_insert_tail(struct list *list, struct list *node)
+list_rcu_insert_tail(struct list *list, struct list *node)
 {
-    list_llsync_add(list->prev, list, node);
+    list_rcu_add(list->prev, list, node);
 }
 
 /*
  * Insert a node before another node.
  */
 static inline void
-list_llsync_insert_before(struct list *node, struct list *next)
+list_rcu_insert_before(struct list *node, struct list *next)
 {
-    list_llsync_add(next->prev, next, node);
+    list_rcu_add(next->prev, next, node);
 }
 
 /*
  * Insert a node after another node.
  */
 static inline void
-list_llsync_insert_after(struct list *node, struct list *prev)
+list_rcu_insert_after(struct list *node, struct list *prev)
 {
-    list_llsync_add(prev, prev->next, node);
+    list_rcu_add(prev, prev->next, node);
 }
 
 /*
@@ -471,18 +471,18 @@ list_llsync_insert_after(struct list *node, struct list *prev)
  * After completion, the node is stale.
  */
 static inline void
-list_llsync_remove(struct list *node)
+list_rcu_remove(struct list *node)
 {
     node->next->prev = node->prev;
-    llsync_store_ptr(node->prev->next, node->next);
+    rcu_store_ptr(node->prev->next, node->next);
 }
 
 /*
  * Macro that evaluates to the address of the structure containing the
  * given node based on the given type and member.
  */
-#define list_llsync_entry(node, type, member) \
-    structof(llsync_load_ptr(node), type, member)
+#define list_rcu_entry(node, type, member) \
+    structof(rcu_load_ptr(node), type, member)
 
 /*
  * Get the first entry of a list.
@@ -491,13 +491,13 @@ list_llsync_remove(struct list *node)
  * the node pointer can only be read once, preventing the combination
  * of lockless list_empty()/list_first_entry() variants.
  */
-#define list_llsync_first_entry(list, type, member)         \
+#define list_rcu_first_entry(list, type, member)            \
 MACRO_BEGIN                                                 \
     struct list *list___;                                   \
     struct list *first___;                                  \
                                                             \
     list___ = (list);                                       \
-    first___ = list_llsync_first(list___);                  \
+    first___ = list_rcu_first(list___);                     \
     list_end(list___, first___)                             \
         ? NULL                                              \
         : list_entry(first___, type, member);               \
@@ -510,29 +510,29 @@ MACRO_END
  * the node pointer can only be read once, preventing the combination
  * of lockless list_empty()/list_next_entry() variants.
  */
-#define list_llsync_next_entry(entry, member) \
-    list_llsync_first_entry(&entry->member, typeof(*entry), member)
+#define list_rcu_next_entry(entry, member) \
+    list_rcu_first_entry(&entry->member, typeof(*entry), member)
 
 /*
  * Forge a loop to process all nodes of a list.
  *
  * The node must not be altered during the loop.
  */
-#define list_llsync_for_each(list, node)    \
-for (node = list_llsync_first(list);        \
+#define list_rcu_for_each(list, node)       \
+for (node = list_rcu_first(list);           \
      !list_end(list, node);                 \
-     node = list_llsync_next(node))
+     node = list_rcu_next(node))
 
 /*
  * Forge a loop to process all entries of a list.
  *
  * The entry node must not be altered during the loop.
  */
-#define list_llsync_for_each_entry(list, entry, member)     \
-for (entry = list_llsync_entry(list_first(list),            \
+#define list_rcu_for_each_entry(list, entry, member)        \
+for (entry = list_rcu_entry(list_first(list),               \
                                typeof(*entry), member);     \
      !list_end(list, &entry->member);                       \
-     entry = list_llsync_entry(list_next(&entry->member),   \
+     entry = list_rcu_entry(list_next(&entry->member),      \
                                typeof(*entry), member))
 
 #endif /* LIST_H */
