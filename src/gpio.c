@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "gpio.h"
@@ -50,14 +51,14 @@ gpio_compute_location(unsigned int io, unsigned int nr_bits,
 }
 
 static void
-gpio_set(volatile struct gpio_regs *regs, unsigned int io,
-         uint32_t af, uint32_t speed, uint32_t pupd)
+gpio_set_af(volatile struct gpio_regs *regs, unsigned int io,
+            uint32_t af, uint32_t speed, uint32_t pupd)
 {
     uint32_t shift, mask, value;
     volatile uint32_t *reg;
 
     gpio_compute_location(io, 2, &shift, &mask);
-    value = (af == 0) ? 1 : 2;
+    value = (af == 15) ? 1 : 2;
     regs->moder &= ~mask;
     regs->moder |= value << shift;
 
@@ -81,9 +82,37 @@ gpio_set(volatile struct gpio_regs *regs, unsigned int io,
     *reg |= af << shift;
 }
 
+static void
+gpio_set_output(volatile struct gpio_regs *regs, unsigned int io, bool high)
+{
+    uint32_t shift, mask;
+
+    gpio_set_af(gpio_c_regs, io, 15, 0, 0);
+
+    gpio_compute_location(io, 1, &shift, &mask);
+
+    if (high) {
+        regs->odr |= high << shift;
+    } else {
+        regs->odr &= ~mask;
+    }
+}
+
 void
 gpio_setup(void)
 {
-    gpio_set(gpio_c_regs, 6, 8, 1, 1);
-    gpio_set(gpio_c_regs, 7, 8, 1, 1);
+    gpio_set_af(gpio_c_regs, 6, 8, 1, 1); /* UART6 TX */
+    gpio_set_af(gpio_c_regs, 7, 8, 1, 1); /* UART6 RX */
+}
+
+void
+gpio_led_on(void)
+{
+    gpio_set_output(gpio_c_regs, 13, true);
+}
+
+void
+gpio_led_off(void)
+{
+    gpio_set_output(gpio_c_regs, 13, false);
 }

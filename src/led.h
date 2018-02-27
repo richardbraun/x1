@@ -20,15 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _GPIO_H
-#define _GPIO_h
+#ifndef _LED_H
+#define _LED_H
 
-/*
- * Initialize the gpio module.
- */
-void gpio_setup(void);
+void led_setup(void);
 
-void gpio_led_on(void);
-void gpio_led_off(void);
-
-#endif /* _GPIO_H */
+#endif /* _LED_H */

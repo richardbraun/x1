@@ -181,6 +181,7 @@ SOURCES = \
 	src/cpu_asm.S \
 	src/flash.c \
 	src/gpio.c \
+	src/led.c \
 	src/main.c \
 	src/mem.c \
 	src/mutex.c \

@@ -26,6 +26,7 @@
 #include <lib/shell.h>
 
 #include "cpu.h"
+#include "led.h"
 #include "main.h"
 #include "mem.h"
 #include "panic.h"
@@ -51,6 +52,7 @@ main(void)
     thread_setup();
     timer_setup();
     shell_setup();
+    led_setup();
     sw_setup();
 
     printf("X1 " QUOTE(VERSION) "\n\n");
