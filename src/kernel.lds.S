@@ -10,8 +10,6 @@
  * are mapped. Completely skip that region for convenience.
  *
  * For a map of lower memory, see http://wiki.osdev.org/Memory_Map_(x86).
- *
- * TODO Handle flash interface registers loaded from flash at reset.
  */
 
 /*
