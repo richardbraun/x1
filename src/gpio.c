@@ -108,11 +108,11 @@ gpio_setup(void)
 void
 gpio_led_on(void)
 {
-    gpio_set_output(gpio_c_regs, 13, true);
+    gpio_set_output(gpio_c_regs, 13, false);
 }
 
 void
 gpio_led_off(void)
 {
-    gpio_set_output(gpio_c_regs, 13, false);
+    gpio_set_output(gpio_c_regs, 13, true);
 }
