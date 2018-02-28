@@ -87,8 +87,6 @@ gpio_set_output(volatile struct gpio_regs *regs, unsigned int io, bool high)
 {
     uint32_t shift, mask;
 
-    gpio_set_af(gpio_c_regs, io, 15, 0, 0);
-
     gpio_compute_location(io, 1, &shift, &mask);
 
     if (high) {
@@ -101,8 +99,9 @@ gpio_set_output(volatile struct gpio_regs *regs, unsigned int io, bool high)
 void
 gpio_setup(void)
 {
-    gpio_set_af(gpio_c_regs, 6, 8, 1, 1); /* UART6 TX */
-    gpio_set_af(gpio_c_regs, 7, 8, 1, 1); /* UART6 RX */
+    gpio_set_af(gpio_c_regs, 6, 8, 1, 1);   /* UART6 TX */
+    gpio_set_af(gpio_c_regs, 7, 8, 1, 1);   /* UART6 RX */
+    gpio_set_af(gpio_c_regs, 13, 15, 0, 0); /* LED */
 }
 
 void
