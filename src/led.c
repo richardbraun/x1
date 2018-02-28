@@ -43,8 +43,11 @@ led_shell_blink(int argc, char **argv)
 {
     bool enabled;
 
-    if (argc != 2) {
+    if (argc > 2) {
         goto error;
+    } else if (argc == 1) {
+        printf("led: blinking: %s\n", led_blinking_enabled ? "yes" : "no");
+        return;
     }
 
     if (strcmp(argv[1], "on") == 0) {
@@ -56,7 +59,6 @@ led_shell_blink(int argc, char **argv)
     }
 
     led_blinking_enabled = enabled;
-
     return;
 
 error:
@@ -65,7 +67,7 @@ error:
 
 static struct shell_cmd led_shell_cmds[] = {
     SHELL_CMD_INITIALIZER("led_blink", led_shell_blink,
-        "led_blink <on|off>",
+        "led_blink [on|off]",
         "control led blinking"),
 };
 
