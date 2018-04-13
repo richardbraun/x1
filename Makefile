@@ -199,7 +199,7 @@ SOURCES += \
 OBJECTS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SOURCES)))
 
 $(BINARY): $(LDS) $(OBJECTS)
-	$(CC) -o $@ $(X1_LDFLAGS) -Xlinker -T $(LDS) $(OBJECTS) $(LIBS)
+	$(CC) -o $@ $(X1_CPPFLAGS) $(X1_CFLAGS) $(X1_LDFLAGS) -Xlinker -T $(LDS) $(OBJECTS) $(LIBS)
 
 %.o: %.c
 	$(CC) $(X1_CPPFLAGS) $(X1_CFLAGS) -c -o $@ $<
