@@ -29,6 +29,7 @@ On Debian, the following packages are required :
      Multilib support for GCC, which provides the 32-bits static libgcc
      library required to link the kernel on 64-bits machines.
 
+
 Examining the kernel binary
 ---------------------------
 
@@ -125,6 +126,7 @@ The project sources are split into three directories :
     This directory contains the actual kernel code.
 
 The coding style used is borrowed from X1's big brother X15 [8].
+
 
 References
 ----------
