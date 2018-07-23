@@ -29,39 +29,56 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <errno.h>
+#include <stdarg.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <lib/macros.h>
 
-#include <src/panic.h>
+/*
+ * Types for I/O functions.
+ */
+typedef int (*shell_getc_fn_t)(void *io_object);
+typedef void (*shell_vfprintf_fn_t)(void *io_object,
+                                    const char *format, va_list ap);
 
-#define SHELL_REGISTER_CMDS(cmds)                           \
-MACRO_BEGIN                                                 \
-    size_t i___;                                            \
-    int error___;                                           \
-                                                            \
-    for (i___ = 0; i___ < ARRAY_SIZE(cmds); i___++) {       \
-        error___ = shell_cmd_register(&(cmds)[i___]);       \
-                                                            \
-        if (error___) {                                     \
-            panic("%s: %s", __func__, strerror(error___));  \
-        }                                                   \
-    }                                                       \
+/*
+ * Shell structure, statically allocatable.
+ */
+struct shell;
+
+/*
+ * Shell command structure.
+ */
+struct shell_cmd;
+
+/*
+ * Command container, shareable across multiple shell instances.
+ */
+struct shell_cmd_set;
+
+/*
+ * Type for command implementation callbacks.
+ */
+typedef void (*shell_fn_t)(struct shell *shell, int argc, char **argv);
+
+#include "shell_i.h"
+
+#define SHELL_REGISTER_CMDS(cmds, cmd_set)                              \
+MACRO_BEGIN                                                             \
+    size_t i_;                                                          \
+    int error_;                                                         \
+                                                                        \
+    for (i_ = 0; i_ < ARRAY_SIZE(cmds); i_++) {                         \
+        error_ = shell_cmd_set_register(cmd_set, &(cmds)[i_]);          \
+                                                                        \
+        if (error_) {                                                   \
+            panic("%s: %s\n", __func__, strerror(error_));              \
+        }                                                               \
+    }                                                                   \
 MACRO_END
-
-typedef void (*shell_fn_t)(int argc, char *argv[]);
-
-struct shell_cmd {
-    struct shell_cmd *ht_next;
-    struct shell_cmd *ls_next;
-    const char *name;
-    shell_fn_t fn;
-    const char *usage;
-    const char *short_desc;
-    const char *long_desc;
-};
 
 /*
  * Static shell command initializers.
@@ -79,11 +96,9 @@ void shell_cmd_init(struct shell_cmd *cmd, const char *name,
                     const char *short_desc, const char *long_desc);
 
 /*
- * Initialize the shell module.
- *
- * On return, shell commands can be registered.
+ * Initialize a command set.
  */
-void shell_setup(void);
+void shell_cmd_set_init(struct shell_cmd_set *cmd_set);
 
 /*
  * Register a shell command.
@@ -91,9 +106,41 @@ void shell_setup(void);
  * The command name must be unique. It must not include characters outside
  * the [a-zA-Z0-9-_] class.
  *
- * The structure passed when calling this function is directly reused by
- * the shell module and must persist in memory.
+ * Commands may safely be registered while the command set is used.
+ *
+ * The command structure must persist in memory as long as the command set
+ * is used.
  */
-int shell_cmd_register(struct shell_cmd *cmd);
+int shell_cmd_set_register(struct shell_cmd_set *cmd_set,
+                           struct shell_cmd *cmd);
+
+/*
+ * Initialize a shell instance.
+ *
+ * On return, shell commands can be registered.
+ */
+void shell_init(struct shell *shell, struct shell_cmd_set *cmd_set,
+                shell_getc_fn_t getc_fn, shell_vfprintf_fn_t vfprintf_fn,
+                void *io_object);
+
+/*
+ * Run the shell.
+ *
+ * This function doesn't return.
+ */
+void shell_run(struct shell *shell);
+
+/*
+ * Obtain the command set associated with a shell.
+ */
+struct shell_cmd_set * shell_get_cmd_set(struct shell *shell);
+
+/*
+ * Printf-like functions specific to the given shell instance.
+ */
+void shell_printf(struct shell *shell, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
+void shell_vprintf(struct shell *shell, const char *format, va_list ap)
+    __attribute__((format(printf, 2, 0)));
 
 #endif /* SHELL_H */

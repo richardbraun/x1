@@ -118,7 +118,6 @@ struct fmt_sscanf_state {
     va_list ap;
     unsigned int flags;
     int width;
-    int precision;
     unsigned int modifier;
     unsigned int specifier;
     unsigned int base;

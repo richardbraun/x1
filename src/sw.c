@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Richard Braun.
+ * Copyright (c) 2017-2018 Richard Braun.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,6 +33,7 @@
 #include <lib/shell.h>
 
 #include "condvar.h"
+#include "main.h"
 #include "mutex.h"
 #include "panic.h"
 #include "sw.h"
@@ -198,8 +199,9 @@ out:
 }
 
 static void
-sw_shell_start(int argc, char **argv)
+sw_shell_start(struct shell *shell, int argc, char **argv)
 {
+    (void)shell;
     (void)argc;
     (void)argv;
 
@@ -207,8 +209,9 @@ sw_shell_start(int argc, char **argv)
 }
 
 static void
-sw_shell_stop(int argc, char **argv)
+sw_shell_stop(struct shell *shell, int argc, char **argv)
 {
+    (void)shell;
     (void)argc;
     (void)argv;
 
@@ -216,8 +219,9 @@ sw_shell_stop(int argc, char **argv)
 }
 
 static void
-sw_shell_resume(int argc, char **argv)
+sw_shell_resume(struct shell *shell, int argc, char **argv)
 {
+    (void)shell;
     (void)argc;
     (void)argv;
 
@@ -225,8 +229,9 @@ sw_shell_resume(int argc, char **argv)
 }
 
 static void
-sw_shell_read(int argc, char **argv)
+sw_shell_read(struct shell *shell, int argc, char **argv)
 {
+    (void)shell;
     (void)argc;
     (void)argv;
 
@@ -234,10 +239,12 @@ sw_shell_read(int argc, char **argv)
 }
 
 static void
-sw_shell_wait(int argc, char **argv)
+sw_shell_wait(struct shell *shell, int argc, char **argv)
 {
     unsigned long seconds;
     int ret;
+
+    (void)shell;
 
     if (argc != 2) {
         goto error;
@@ -253,7 +260,7 @@ sw_shell_wait(int argc, char **argv)
     return;
 
 error:
-    printf("sw_wait: error: invalid arguments\n");
+    shell_printf(shell, "sw_wait: error: invalid arguments\n");
 }
 
 static struct shell_cmd sw_shell_cmds[] = {
@@ -283,5 +290,5 @@ sw_setup(void)
         panic("sw: error: unable to create stopwatch");
     }
 
-    SHELL_REGISTER_CMDS(sw_shell_cmds);
+    SHELL_REGISTER_CMDS(sw_shell_cmds, main_get_shell_cmd_set());
 }
